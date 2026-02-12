@@ -1,0 +1,31 @@
+# Environments
+.env
+.venv
+venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+
+# Node
+node_modules/
+npm-debug.log
+yarn-error.log
+.next/
+dist/
+out/
+build/
+
+# IDEs
+.idea/
+.vscode/
+
+# System
+.DS_Store
+
+# Deployment Secrets
+deployment/prod.env
+backend_url.txt
+frontend_url.txt
