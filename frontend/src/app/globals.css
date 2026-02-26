@@ -9,12 +9,61 @@
   --background-subtle: #0a0a0a;
   --surface: #111111;
   --surface-light: #1a1a1a;
-  --border: #222222;
-  --border-light: #2a2a2a;
-  --text-main: #fafafa;
-  --text-muted: #888888;
-  --text-subtle: #555555;
+  --border: #333333;
+  --border-light: #3a3a3a;
+  --text-main: #f5f5f5;
+  --text-muted: #a0a0a0;
+  --text-subtle: #7a7a7a;
   --accent: #3b82f6;
+  --card-bg: rgba(10, 10, 10, 0.88);
+  --overlay-bg: rgba(0, 0, 0, 0.7);
+  --input-bg: rgba(255, 255, 255, 0.08);
+  --input-border: rgba(255, 255, 255, 0.18);
+  --hover-bg: rgba(255, 255, 255, 0.07);
+  --badge-bg: rgba(255, 255, 255, 0.1);
+  --scrollbar-thumb: #444;
+  --selection-bg: rgba(255, 255, 255, 0.15);
+  --gradient-from: #050505;
+  --logo-bg: #ffffff;
+  --logo-fg: #000000;
+  --btn-primary-bg: #ffffff;
+  --btn-primary-fg: #000000;
+  --btn-primary-hover: rgba(255, 255, 255, 0.9);
+  --code-highlight: rgba(255, 255, 255, 0.04);
+  --code-border: rgba(255, 255, 255, 0.15);
+  --divider: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #111111;
+  --primary: #111111;
+  --background-subtle: #f7f7f8;
+  --surface: #eeeeee;
+  --surface-light: #e0e0e0;
+  --border: #c0c0c0;
+  --border-light: #d0d0d0;
+  --text-main: #111111;
+  --text-muted: #4a4a4a;
+  --text-subtle: #6b6b6b;
+  --accent: #2563eb;
+  --card-bg: rgba(255, 255, 255, 0.92);
+  --overlay-bg: rgba(255, 255, 255, 0.9);
+  --input-bg: rgba(0, 0, 0, 0.04);
+  --input-border: rgba(0, 0, 0, 0.18);
+  --hover-bg: rgba(0, 0, 0, 0.06);
+  --badge-bg: rgba(0, 0, 0, 0.07);
+  --scrollbar-thumb: #b0b0b0;
+  --selection-bg: rgba(37, 99, 235, 0.2);
+  --gradient-from: #ffffff;
+  --logo-bg: #111111;
+  --logo-fg: #ffffff;
+  --btn-primary-bg: #111111;
+  --btn-primary-fg: #ffffff;
+  --btn-primary-hover: rgba(17, 17, 17, 0.85);
+  --code-highlight: rgba(0, 0, 0, 0.04);
+  --code-border: rgba(0, 0, 0, 0.15);
+  --divider: rgba(0, 0, 0, 0.1);
 }
 
 @theme inline {
@@ -37,7 +86,7 @@
 
 * {
   scrollbar-width: thin;
-  scrollbar-color: #333 transparent;
+  scrollbar-color: var(--scrollbar-thumb) transparent;
 }
 
 body {
@@ -46,10 +95,11 @@ body {
   font-family: "Inter", sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 ::selection {
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: var(--selection-bg);
 }
 
 /* Gooey nav color vars */
@@ -58,4 +108,11 @@ body {
   --color-2: #3b82f6;
   --color-3: #8b5cf6;
   --color-4: #06b6d4;
+}
+
+[data-theme="light"] {
+  --color-1: #111111;
+  --color-2: #2563eb;
+  --color-3: #7c3aed;
+  --color-4: #0891b2;
 }

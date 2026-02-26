@@ -26,16 +26,16 @@ export default function Sidebar({ activePage = "dashboard", isCollapsed, onToggl
     ];
 
     return (
-        <aside className={`fixed left-0 top-0 h-full bg-[#0a0a0a] border-r border-white/5 flex flex-col transition-all duration-300 z-40 ${isCollapsed ? "w-16" : "w-56"}`}>
+        <aside className={`fixed left-0 top-0 h-full bg-[var(--background-subtle)] border-r border-[var(--divider)] flex flex-col transition-all duration-300 z-40 ${isCollapsed ? "w-16" : "w-56"}`}>
             {/* Logo */}
-            <div className="flex items-center gap-2.5 px-4 h-16 border-b border-white/5">
-                <div className="flex items-center justify-center w-7 h-7 bg-white rounded-md flex-shrink-0">
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="black">
+            <div className="flex items-center gap-2.5 px-4 h-16 border-b border-[var(--divider)]">
+                <div className="flex items-center justify-center w-7 h-7 bg-[var(--logo-bg)] rounded-md flex-shrink-0">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="var(--logo-fg)">
                         <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                     </svg>
                 </div>
                 {!isCollapsed && (
-                    <span className="font-semibold text-white text-sm tracking-tight">Pinnacle</span>
+                    <span className="font-semibold text-[var(--text-main)] text-sm tracking-tight">Pinnacle</span>
                 )}
             </div>
 
@@ -47,9 +47,9 @@ export default function Sidebar({ activePage = "dashboard", isCollapsed, onToggl
                         <Link
                             key={item.id}
                             href={item.href}
-                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors text-sm ${isActive ? "bg-white/10 text-white" : "text-white/40 hover:bg-white/5 hover:text-white/70"}`}
+                            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg mb-1 transition-colors text-sm ${isActive ? "bg-[var(--hover-bg)] text-[var(--text-main)]" : "text-[var(--text-subtle)] hover:bg-[var(--hover-bg)] hover:text-[var(--text-muted)]"}`}
                         >
-                            <span className={isActive ? "text-white" : "text-white/40"}>{item.icon}</span>
+                            <span className={isActive ? "text-[var(--text-main)]" : "text-[var(--text-subtle)]"}>{item.icon}</span>
                             {!isCollapsed && <span className="font-medium">{item.name}</span>}
                         </Link>
                     );
@@ -59,9 +59,9 @@ export default function Sidebar({ activePage = "dashboard", isCollapsed, onToggl
             {/* Collapse Toggle */}
             <button
                 onClick={onToggleCollapse}
-                className="absolute -right-3 top-20 w-6 h-6 bg-[#111] border border-white/10 rounded-full flex items-center justify-center hover:bg-white/10 transition-colors"
+                className="absolute -right-3 top-20 w-6 h-6 bg-[var(--surface)] border border-[var(--border)] rounded-full flex items-center justify-center hover:bg-[var(--surface-light)] transition-colors"
             >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-white/50 transition-transform ${isCollapsed ? "rotate-180" : ""}`}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`text-[var(--text-subtle)] transition-transform ${isCollapsed ? "rotate-180" : ""}`}>
                     <path d="M15 18l-6-6 6-6" />
                 </svg>
             </button>

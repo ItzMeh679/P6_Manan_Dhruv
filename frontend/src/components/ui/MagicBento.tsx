@@ -353,7 +353,7 @@ export const GlobalSpotlight: React.FC<{
       z-index: 200;
       opacity: 0;
       transform: translate(-50%, -50%);
-      mix-blend-mode: screen;
+      mix-blend-mode: ${document.documentElement.getAttribute('data-theme') === 'light' ? 'multiply' : 'screen'};
     `;
             document.body.appendChild(spotlight);
             spotlightRef.current = spotlight;
@@ -472,7 +472,7 @@ export const BentoSection: React.FC<{
                     --glow-intensity: 0;
                     --glow-radius: 200px;
                     --glow-color: ${glowColor};
-                    --border-color: rgba(255, 255, 255, 0.05);
+                    --border-color: var(--divider);
                 }
 
                 .card--border-glow::after {
@@ -498,8 +498,12 @@ export const BentoSection: React.FC<{
                     opacity: 1;
                 }
 
-                .card--border-glow:hover {
+                :root .card--border-glow:hover {
                     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4), 0 0 30px rgba(${glowColor}, 0.1);
+                }
+
+                [data-theme="light"] .card--border-glow:hover {
+                    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08), 0 0 30px rgba(0, 0, 0, 0.04);
                 }
 
                 .particle::before {

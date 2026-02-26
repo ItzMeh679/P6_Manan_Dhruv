@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import GooeyNav from "@/components/ui/GooeyNav";
 import GlassIcons from "@/components/ui/GlassIcons";
 import CardSwap, { Card } from "@/components/ui/CardSwap";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const Threads = dynamic(() => import("@/components/ui/Threads"), { ssr: false });
 
@@ -61,13 +62,13 @@ interface LandingClientProps {
 
 export default function LandingClient({ isLoggedIn }: LandingClientProps) {
     return (
-        <div className="min-h-screen flex flex-col bg-[#050505] text-white overflow-hidden">
+        <div className="min-h-screen flex flex-col bg-[var(--background)] text-[var(--text-main)] overflow-hidden transition-colors duration-300">
             {/* Navigation */}
             <nav className="fixed top-0 z-50 w-full">
                 <div className="max-w-7xl mx-auto px-6 py-5 flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-2.5">
-                        <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="black">
+                        <div className="w-7 h-7 rounded-md bg-[var(--logo-bg)] flex items-center justify-center">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--logo-fg)">
                                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                             </svg>
                         </div>
@@ -94,10 +95,11 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
                         />
                     </div>
                     <div className="flex items-center gap-3">
+                        <ThemeToggle />
                         {isLoggedIn ? (
                             <Link
                                 href="/dashboard"
-                                className="px-5 py-2 rounded-full bg-white text-black text-sm font-medium hover:bg-white/90 transition-all"
+                                className="px-5 py-2 rounded-full bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] text-sm font-medium hover:opacity-90 transition-all"
                             >
                                 Dashboard
                             </Link>
@@ -105,13 +107,13 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
                             <>
                                 <Link
                                     href="/sign-in"
-                                    className="px-4 py-2 text-sm text-white/60 hover:text-white transition-colors"
+                                    className="px-4 py-2 text-sm text-[var(--text-subtle)] hover:text-[var(--text-main)] transition-colors"
                                 >
                                     Sign In
                                 </Link>
                                 <Link
                                     href="/sign-in"
-                                    className="px-5 py-2 rounded-full bg-white text-black text-sm font-medium hover:bg-white/90 transition-all"
+                                    className="px-5 py-2 rounded-full bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] text-sm font-medium hover:opacity-90 transition-all"
                                 >
                                     Get Started
                                 </Link>
@@ -134,32 +136,32 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
                 </div>
 
                 {/* Gradient overlay */}
-                <div className="absolute inset-0 z-[1] bg-gradient-to-b from-[#050505] via-transparent to-[#050505]" />
+                <div className="absolute inset-0 z-[1] bg-gradient-to-b from-[var(--gradient-from)] via-transparent to-[var(--gradient-from)]" />
 
                 <div className="relative z-10 max-w-7xl mx-auto px-6 grid grid-cols-1 lg:grid-cols-2 gap-16 lg:gap-24 items-center pt-24">
                     {/* Left: Text Content */}
                     <div className="flex flex-col gap-8 lg:-ml-6">
-                        <div className="inline-flex w-fit items-center rounded-full border border-white/10 bg-white/5 px-3.5 py-1.5 text-xs font-medium text-white/70 backdrop-blur-sm">
+                        <div className="inline-flex w-fit items-center rounded-full border border-[var(--border)] bg-[var(--badge-bg)] px-3.5 py-1.5 text-xs font-medium text-[var(--text-muted)] backdrop-blur-sm">
                             <span className="mr-2 h-1.5 w-1.5 rounded-full bg-green-400 animate-pulse" />
                             v2.0 — Production Ready
                         </div>
                         <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-[1.05] tracking-tight font-[family-name:var(--font-space-grotesk)]">
                             Ship apps
                             <br />
-                            <span className="text-white/40">not boilerplate.</span>
+                            <span className="text-[var(--text-subtle)]">not boilerplate.</span>
                         </h1>
-                        <p className="text-lg text-white/50 max-w-md leading-relaxed">
+                        <p className="text-lg text-[var(--text-subtle)] max-w-md leading-relaxed">
                             Production-ready starter with Next.js, FastAPI, and PostgreSQL.
                             Type-safe, Dockerized, deploy in minutes.
                         </p>
                         <div className="flex items-center gap-4 mt-2">
                             <Link
                                 href={isLoggedIn ? "/dashboard" : "/sign-in"}
-                                className="px-7 py-3 rounded-full bg-white text-black font-semibold text-sm hover:bg-white/90 transition-all hover:shadow-[0_0_30px_rgba(255,255,255,0.15)]"
+                                className="px-7 py-3 rounded-full bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] font-semibold text-sm hover:opacity-90 transition-all hover:shadow-lg"
                             >
                                 {isLoggedIn ? "Go to Dashboard" : "Start Building"}
                             </Link>
-                            <a href="https://github.com/mananshio/P6_Manan_Dhruv" target="_blank" rel="noopener noreferrer" className="px-7 py-3 rounded-full border border-white/15 text-white/70 font-medium text-sm hover:border-white/30 hover:text-white transition-all text-center inline-block">
+                            <a href="https://github.com/mananshio/P6_Manan_Dhruv" target="_blank" rel="noopener noreferrer" className="px-7 py-3 rounded-full border border-[var(--border)] text-[var(--text-muted)] font-medium text-sm hover:border-[var(--border-light)] hover:text-[var(--text-main)] transition-all text-center inline-block">
                                 View on GitHub
                             </a>
                         </div>
@@ -177,7 +179,7 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
                             easing="elastic"
                         >
                             <Card className="p-8 flex flex-col justify-between">
-                                <div className="text-xs text-white/40 font-mono mb-4">
+                                <div className="text-xs text-[var(--text-subtle)] font-mono mb-4">
                                     $ make up
                                 </div>
                                 <div className="space-y-2">
@@ -185,7 +187,7 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
                                         ✓ Frontend ready on :3000
                                     </div>
                                     <div className="text-sm text-green-400 font-mono">
-                                        ✓ Backend ready on :8000
+                                        ✓ Backend ready on :3000
                                     </div>
                                     <div className="text-sm text-green-400 font-mono">
                                         ✓ Database connected
@@ -193,10 +195,10 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
                                 </div>
                             </Card>
                             <Card className="p-8 flex flex-col justify-between">
-                                <div className="text-xs text-white/40 font-mono mb-4">
+                                <div className="text-xs text-[var(--text-subtle)] font-mono mb-4">
                                     auth.ts
                                 </div>
-                                <div className="font-mono text-xs text-white/70 space-y-1">
+                                <div className="font-mono text-xs text-[var(--text-muted)] space-y-1">
                                     <div>
                                         <span className="text-purple-400">export const</span> auth ={" "}
                                         <span className="text-blue-400">betterAuth</span>({"{"})
@@ -209,14 +211,14 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
                                         socialProviders: {"{ "}
                                         <span className="text-orange-300">google</span> {"}"}
                                     </div>
-                                    <div>{"}"})</div>
+                                    <div>{"}"});</div>
                                 </div>
                             </Card>
                             <Card className="p-8 flex flex-col justify-between">
-                                <div className="text-xs text-white/40 font-mono mb-4">
+                                <div className="text-xs text-[var(--text-subtle)] font-mono mb-4">
                                     docker-compose.yml
                                 </div>
-                                <div className="font-mono text-xs text-white/70 space-y-1">
+                                <div className="font-mono text-xs text-[var(--text-muted)] space-y-1">
                                     <div>
                                         <span className="text-blue-400">services</span>:
                                     </div>
@@ -243,7 +245,7 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
                         <h2 className="text-3xl sm:text-4xl font-bold tracking-tight font-[family-name:var(--font-space-grotesk)] mb-4">
                             Everything you need
                         </h2>
-                        <p className="text-white/40 text-lg max-w-md mx-auto">
+                        <p className="text-[var(--text-subtle)] text-lg max-w-md mx-auto">
                             A complete stack, pre-configured and ready for production.
                         </p>
                     </div>
@@ -255,36 +257,36 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
 
                     {/* Feature Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-24">
-                        <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-                            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mb-5">
-                                <svg className="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="p-8 rounded-2xl border border-[var(--divider)] bg-[var(--code-highlight)] hover:bg-[var(--hover-bg)] transition-colors">
+                            <div className="w-10 h-10 rounded-lg bg-[var(--badge-bg)] flex items-center justify-center mb-5">
+                                <svg className="w-5 h-5 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 10V3L4 14h7v7l9-11h-7z" />
                                 </svg>
                             </div>
                             <h3 className="text-lg font-semibold mb-2 font-[family-name:var(--font-space-grotesk)]">Hot Reload</h3>
-                            <p className="text-white/40 text-sm leading-relaxed">
+                            <p className="text-[var(--text-subtle)] text-sm leading-relaxed">
                                 Instant feedback on both frontend and backend inside Docker containers.
                             </p>
                         </div>
-                        <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-                            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mb-5">
-                                <svg className="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="p-8 rounded-2xl border border-[var(--divider)] bg-[var(--code-highlight)] hover:bg-[var(--hover-bg)] transition-colors">
+                            <div className="w-10 h-10 rounded-lg bg-[var(--badge-bg)] flex items-center justify-center mb-5">
+                                <svg className="w-5 h-5 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12.75L11.25 15 15 9.75m-3-7.036A11.959 11.959 0 013.598 6 11.99 11.99 0 003 9.749c0 5.592 3.824 10.29 9 11.623 5.176-1.332 9-6.03 9-11.622 0-1.31-.21-2.571-.598-3.751h-.152c-3.196 0-6.1-1.248-8.25-3.285z" />
                                 </svg>
                             </div>
                             <h3 className="text-lg font-semibold mb-2 font-[family-name:var(--font-space-grotesk)]">Secure by Default</h3>
-                            <p className="text-white/40 text-sm leading-relaxed">
+                            <p className="text-[var(--text-subtle)] text-sm leading-relaxed">
                                 JWT auth, password hashing, CORS, and API keys pre-configured out of the box.
                             </p>
                         </div>
-                        <div className="p-8 rounded-2xl border border-white/5 bg-white/[0.02] hover:bg-white/[0.04] transition-colors">
-                            <div className="w-10 h-10 rounded-lg bg-white/5 flex items-center justify-center mb-5">
-                                <svg className="w-5 h-5 text-white/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <div className="p-8 rounded-2xl border border-[var(--divider)] bg-[var(--code-highlight)] hover:bg-[var(--hover-bg)] transition-colors">
+                            <div className="w-10 h-10 rounded-lg bg-[var(--badge-bg)] flex items-center justify-center mb-5">
+                                <svg className="w-5 h-5 text-[var(--text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17.25 6.75L22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3l-4.5 16.5" />
                                 </svg>
                             </div>
                             <h3 className="text-lg font-semibold mb-2 font-[family-name:var(--font-space-grotesk)]">Type-Safe</h3>
-                            <p className="text-white/40 text-sm leading-relaxed">
+                            <p className="text-[var(--text-subtle)] text-sm leading-relaxed">
                                 End-to-end type safety from your database schema to React components.
                             </p>
                         </div>
@@ -293,38 +295,38 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
             </section>
 
             {/* Deploy Section */}
-            <section id="deploy" className="relative py-32 border-t border-white/5">
+            <section id="deploy" className="relative py-32 border-t border-[var(--divider)]">
                 <div className="max-w-7xl mx-auto px-6">
                     <div className="max-w-2xl mx-auto text-center">
                         <h2 className="text-3xl sm:text-4xl font-bold tracking-tight font-[family-name:var(--font-space-grotesk)] mb-4">
                             Three commands. That&apos;s it.
                         </h2>
-                        <p className="text-white/40 text-lg mb-12">
+                        <p className="text-[var(--text-subtle)] text-lg mb-12">
                             Clone, configure, deploy. No more spent on setup.
                         </p>
-                        <div className="rounded-2xl border border-white/10 bg-white/[0.02] p-8 text-left font-mono text-sm">
+                        <div className="rounded-2xl border border-[var(--code-border)] bg-[var(--code-highlight)] p-8 text-left font-mono text-sm">
                             <div className="flex items-center gap-2 mb-6">
-                                <div className="w-3 h-3 rounded-full bg-white/20" />
-                                <div className="w-3 h-3 rounded-full bg-white/20" />
-                                <div className="w-3 h-3 rounded-full bg-white/20" />
+                                <div className="w-3 h-3 rounded-full bg-[var(--border)]" />
+                                <div className="w-3 h-3 rounded-full bg-[var(--border)]" />
+                                <div className="w-3 h-3 rounded-full bg-[var(--border)]" />
                             </div>
                             <div className="space-y-3">
                                 <div className="flex">
-                                    <span className="text-white/30 mr-3 select-none">$</span>
-                                    <span className="text-white/70">
+                                    <span className="text-[var(--text-subtle)] mr-3 select-none">$</span>
+                                    <span className="text-[var(--text-muted)]">
                                         git clone pinnacle/template.git
                                     </span>
                                 </div>
                                 <div className="flex">
-                                    <span className="text-white/30 mr-3 select-none">$</span>
-                                    <span className="text-white/70">cp .env.example .env</span>
+                                    <span className="text-[var(--text-subtle)] mr-3 select-none">$</span>
+                                    <span className="text-[var(--text-muted)]">cp .env.example .env</span>
                                 </div>
                                 <div className="flex">
-                                    <span className="text-white/30 mr-3 select-none">$</span>
-                                    <span className="text-white/70">make up</span>
-                                    <span className="ml-1 inline-block w-2 h-4 bg-white/50 animate-pulse" />
+                                    <span className="text-[var(--text-subtle)] mr-3 select-none">$</span>
+                                    <span className="text-[var(--text-muted)]">make up</span>
+                                    <span className="ml-1 inline-block w-2 h-4 bg-[var(--text-subtle)] animate-pulse" />
                                 </div>
-                                <div className="mt-4 pt-4 border-t border-white/5">
+                                <div className="mt-4 pt-4 border-t border-[var(--divider)]">
                                     <span className="text-green-400/70">
                                         ✓ All services running — localhost:3000
                                     </span>
@@ -336,10 +338,10 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
             </section>
 
             {/* Footer */}
-            <footer className="border-t border-white/5 py-12 mt-auto">
+            <footer className="border-t border-[var(--divider)] py-12 mt-auto">
                 <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-2 text-white/40">
-                        <div className="w-5 h-5 rounded bg-white/10 flex items-center justify-center">
+                    <div className="flex items-center gap-2 text-[var(--text-subtle)]">
+                        <div className="w-5 h-5 rounded bg-[var(--badge-bg)] flex items-center justify-center">
                             <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
                                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                             </svg>
@@ -351,19 +353,19 @@ export default function LandingClient({ isLoggedIn }: LandingClientProps) {
                     <div className="flex gap-6">
                         <a
                             href="#"
-                            className="text-sm text-white/30 hover:text-white/60 transition-colors"
+                            className="text-sm text-[var(--text-subtle)] hover:text-[var(--text-muted)] transition-colors"
                         >
                             GitHub
                         </a>
                         <a
                             href="#"
-                            className="text-sm text-white/30 hover:text-white/60 transition-colors"
+                            className="text-sm text-[var(--text-subtle)] hover:text-[var(--text-muted)] transition-colors"
                         >
                             Docs
                         </a>
                         <a
                             href="#"
-                            className="text-sm text-white/30 hover:text-white/60 transition-colors"
+                            className="text-sm text-[var(--text-subtle)] hover:text-[var(--text-muted)] transition-colors"
                         >
                             Discord
                         </a>

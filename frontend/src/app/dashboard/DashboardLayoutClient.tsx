@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import TopNav from "@/components/TopNav";
@@ -37,7 +37,7 @@ export default function DashboardLayoutClient({
     };
 
     return (
-        <div className="min-h-screen bg-[#050505]">
+        <div className="min-h-screen bg-[var(--background)] transition-colors duration-300">
             <Sidebar
                 activePage={getActivePage()}
                 isCollapsed={isCollapsed}

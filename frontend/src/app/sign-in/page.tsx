@@ -4,6 +4,7 @@ import { useState } from "react";
 import { authClient } from "@/lib/auth-client";
 import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
+import ThemeToggle from "@/components/ThemeToggle";
 
 const DarkVeil = dynamic(() => import("@/components/ui/DarkVeil"), {
     ssr: false,
@@ -57,7 +58,12 @@ export default function SignIn() {
     };
 
     return (
-        <div className="relative flex h-screen items-center justify-center bg-[#050505] overflow-hidden">
+        <div className="relative flex h-screen items-center justify-center bg-[var(--background)] overflow-hidden transition-colors duration-300">
+            {/* Theme toggle */}
+            <div className="absolute top-5 right-5 z-20">
+                <ThemeToggle />
+            </div>
+
             {/* DarkVeil Background */}
             <div className="absolute inset-0 z-0 opacity-50">
                 <DarkVeil
@@ -72,15 +78,15 @@ export default function SignIn() {
             </div>
 
             {/* Gradient overlays */}
-            <div className="absolute inset-0 z-[1] bg-gradient-to-t from-[#050505] via-transparent to-[#050505]/80" />
+            <div className="absolute inset-0 z-[1] bg-gradient-to-t from-[var(--gradient-from)] via-transparent to-[var(--gradient-from)]/80" />
 
             {/* Auth Card */}
             <div className="relative z-10 w-full max-w-sm mx-4">
-                <div className="rounded-2xl border border-white/10 bg-black/60 backdrop-blur-xl p-8">
+                <div className="rounded-2xl border border-[var(--code-border)] bg-[var(--overlay-bg)] backdrop-blur-xl p-8">
                     {/* Logo */}
                     <div className="flex items-center justify-center gap-2 mb-8">
-                        <div className="w-7 h-7 rounded-md bg-white flex items-center justify-center">
-                            <svg width="14" height="14" viewBox="0 0 24 24" fill="black">
+                        <div className="w-7 h-7 rounded-md bg-[var(--logo-bg)] flex items-center justify-center">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="var(--logo-fg)">
                                 <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5" />
                             </svg>
                         </div>
@@ -92,7 +98,7 @@ export default function SignIn() {
                     <h1 className="text-xl font-semibold text-center mb-1 font-[family-name:var(--font-space-grotesk)]">
                         {isSignUp ? "Create Account" : "Welcome back"}
                     </h1>
-                    <p className="text-sm text-white/40 text-center mb-6">
+                    <p className="text-sm text-[var(--text-subtle)] text-center mb-6">
                         {isSignUp
                             ? "Start building with Pinnacle"
                             : "Sign in to your account"}
@@ -102,7 +108,7 @@ export default function SignIn() {
                     <button
                         onClick={handleGoogleSignIn}
                         disabled={isLoading}
-                        className="w-full flex items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/5 py-2.5 px-4 text-sm text-white/80 hover:bg-white/10 disabled:opacity-50 transition-all mb-5"
+                        className="w-full flex items-center justify-center gap-3 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] py-2.5 px-4 text-sm text-[var(--text-muted)] hover:bg-[var(--hover-bg)] disabled:opacity-50 transition-all mb-5"
                     >
                         <svg className="w-4 h-4" viewBox="0 0 24 24">
                             <path
@@ -127,9 +133,9 @@ export default function SignIn() {
 
                     {/* Divider */}
                     <div className="flex items-center gap-3 mb-5">
-                        <div className="flex-1 h-px bg-white/10" />
-                        <span className="text-xs text-white/30">or</span>
-                        <div className="flex-1 h-px bg-white/10" />
+                        <div className="flex-1 h-px bg-[var(--input-border)]" />
+                        <span className="text-xs text-[var(--text-subtle)]">or</span>
+                        <div className="flex-1 h-px bg-[var(--input-border)]" />
                     </div>
 
                     {/* Form */}
@@ -138,7 +144,7 @@ export default function SignIn() {
                             <input
                                 type="text"
                                 placeholder="Full Name"
-                                className="w-full px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/25 transition-colors"
+                                className="w-full px-4 py-2.5 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border-light)] transition-colors"
                                 value={name}
                                 onChange={(e) => setName(e.target.value)}
                             />
@@ -146,14 +152,14 @@ export default function SignIn() {
                         <input
                             type="email"
                             placeholder="Email"
-                            className="w-full px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/25 transition-colors"
+                            className="w-full px-4 py-2.5 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border-light)] transition-colors"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
                         />
                         <input
                             type="password"
                             placeholder="Password"
-                            className="w-full px-4 py-2.5 rounded-xl border border-white/10 bg-white/5 text-sm text-white placeholder:text-white/30 focus:outline-none focus:border-white/25 transition-colors"
+                            className="w-full px-4 py-2.5 rounded-xl border border-[var(--input-border)] bg-[var(--input-bg)] text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border-light)] transition-colors"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
                         />
@@ -162,16 +168,16 @@ export default function SignIn() {
                     <button
                         onClick={handleSubmit}
                         disabled={isLoading}
-                        className="w-full mt-5 py-2.5 rounded-xl bg-white text-black font-medium text-sm hover:bg-white/90 disabled:opacity-50 transition-all"
+                        className="w-full mt-5 py-2.5 rounded-xl bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] font-medium text-sm hover:opacity-90 disabled:opacity-50 transition-all"
                     >
                         {isLoading ? "Loading..." : isSignUp ? "Create Account" : "Sign In"}
                     </button>
 
-                    <p className="mt-5 text-center text-xs text-white/40">
+                    <p className="mt-5 text-center text-xs text-[var(--text-subtle)]">
                         {isSignUp ? "Already have an account?" : "No account?"}{" "}
                         <button
                             onClick={() => setIsSignUp(!isSignUp)}
-                            className="text-white/70 hover:text-white underline underline-offset-2 transition-colors"
+                            className="text-[var(--text-muted)] hover:text-[var(--text-main)] underline underline-offset-2 transition-colors"
                         >
                             {isSignUp ? "Sign In" : "Sign Up"}
                         </button>

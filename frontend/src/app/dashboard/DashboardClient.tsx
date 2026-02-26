@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useTheme } from "@/components/ThemeProvider";
 import StatsCard from "@/components/StatsCard";
 import DotGrid from '@/components/ui/DotGrid';
 import { BentoSection, ParticleCard } from '@/components/ui/MagicBento';
@@ -18,6 +19,7 @@ interface DashboardClientProps {
 }
 
 export default function DashboardClient({ items, createItemAction }: DashboardClientProps) {
+    const { theme } = useTheme();
     const [searchQuery, setSearchQuery] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
     const itemsPerPage = 5;
@@ -55,8 +57,8 @@ export default function DashboardClient({ items, createItemAction }: DashboardCl
                 <DotGrid
                     dotSize={4}
                     gap={15}
-                    baseColor="#1f1a26"
-                    activeColor="#ffffff"
+                    baseColor={theme === 'light' ? '#e0e0e0' : '#1f1a26'}
+                    activeColor={theme === 'light' ? '#111111' : '#ffffff'}
                     proximity={150}
                     shockRadius={200}
                     shockStrength={3}
@@ -69,15 +71,15 @@ export default function DashboardClient({ items, createItemAction }: DashboardCl
                 {/* Header */}
                 <div className="flex items-start justify-between mb-8">
                     <div>
-                        <h1 className="text-2xl font-bold text-white font-[family-name:var(--font-space-grotesk)]">
+                        <h1 className="text-2xl font-bold text-[var(--text-main)] font-[family-name:var(--font-space-grotesk)]">
                             Resources
                         </h1>
-                        <p className="text-white/40 text-sm mt-1">
+                        <p className="text-[var(--text-subtle)] text-sm mt-1">
                             Manage your organization&apos;s inventory.
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2 border border-white/10 rounded-lg bg-white/[0.02] text-white/50 hover:text-white/80 hover:bg-white/5 transition-colors text-sm">
+                        <button className="flex items-center gap-2 px-4 py-2 border border-[var(--border)] rounded-lg bg-[var(--code-highlight)] text-[var(--text-muted)] hover:text-[var(--text-main)] hover:bg-[var(--hover-bg)] transition-colors text-sm">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
                                 <polyline points="7 10 12 15 17 10" />
@@ -88,7 +90,7 @@ export default function DashboardClient({ items, createItemAction }: DashboardCl
                         <button
                             type="button"
                             onClick={() => document.getElementById("new-resource-form")?.scrollIntoView({ behavior: "smooth" })}
-                            className="flex items-center gap-2 px-4 py-2 bg-white text-black rounded-lg hover:bg-white/90 transition-colors text-sm font-medium"
+                            className="flex items-center gap-2 px-4 py-2 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] rounded-lg hover:opacity-90 transition-colors text-sm font-medium"
                         >
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                 <line x1="12" y1="5" x2="12" y2="19" />
@@ -130,27 +132,27 @@ export default function DashboardClient({ items, createItemAction }: DashboardCl
                 {/* Content Grid */}
                 <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
                     {/* New Resource */}
-                    <ParticleCard id="new-resource-form" enableTilt={false} enableMagnetism={false} glowColor="255, 255, 255" className="lg:col-span-2 card--border-glow bg-black/40 backdrop-blur-[20px] rounded-xl border border-white/5">
+                    <ParticleCard id="new-resource-form" enableTilt={false} enableMagnetism={false} glowColor="255, 255, 255" className="lg:col-span-2 card--border-glow bg-[var(--card-bg)] backdrop-blur-[20px] rounded-xl border border-[var(--divider)]">
                         <div className="p-6 relative z-10">
                             <div className="flex items-center gap-2 mb-6">
-                                <div className="w-6 h-6 rounded-full bg-white/10 flex items-center justify-center">
+                                <div className="w-6 h-6 rounded-full bg-[var(--badge-bg)] flex items-center justify-center">
                                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <line x1="12" y1="5" x2="12" y2="19" />
                                         <line x1="5" y1="12" x2="19" y2="12" />
                                     </svg>
                                 </div>
-                                <h2 className="font-semibold text-white text-sm">New Resource</h2>
+                                <h2 className="font-semibold text-[var(--text-main)] text-sm">New Resource</h2>
                             </div>
                             <form action={createItemAction} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-medium text-white/50 mb-1.5">Title</label>
-                                    <input name="title" type="text" placeholder="e.g. Quantum Processor" className="w-full px-4 py-2.5 border border-white/10 rounded-lg bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20" required />
+                                    <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Title</label>
+                                    <input name="title" type="text" placeholder="e.g. Quantum Processor" className="w-full px-4 py-2.5 border border-[var(--input-border)] rounded-lg bg-[var(--input-bg)] text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border-light)]" required />
                                 </div>
                                 <div>
-                                    <label className="block text-xs font-medium text-white/50 mb-1.5">Description</label>
-                                    <textarea name="description" rows={3} placeholder="Specifications and notes..." className="w-full px-4 py-2.5 border border-white/10 rounded-lg bg-white/5 text-sm text-white placeholder:text-white/25 focus:outline-none focus:border-white/20 resize-none" />
+                                    <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">Description</label>
+                                    <textarea name="description" rows={3} placeholder="Specifications and notes..." className="w-full px-4 py-2.5 border border-[var(--input-border)] rounded-lg bg-[var(--input-bg)] text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border-light)] resize-none" />
                                 </div>
-                                <button type="submit" className="w-full py-2.5 bg-white text-black rounded-lg font-medium text-sm hover:bg-white/90 transition-colors">
+                                <button type="submit" className="w-full py-2.5 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] rounded-lg font-medium text-sm hover:opacity-90 transition-colors">
                                     Deploy Resource
                                 </button>
                             </form>
@@ -158,12 +160,12 @@ export default function DashboardClient({ items, createItemAction }: DashboardCl
                     </ParticleCard>
 
                     {/* Table */}
-                    <ParticleCard enableTilt={false} enableMagnetism={false} glowColor="255, 255, 255" className="lg:col-span-3 card--border-glow bg-black/40 backdrop-blur-[20px] rounded-xl border border-white/5">
+                    <ParticleCard enableTilt={false} enableMagnetism={false} glowColor="255, 255, 255" className="lg:col-span-3 card--border-glow bg-[var(--card-bg)] backdrop-blur-[20px] rounded-xl border border-[var(--divider)]">
                         <div className="relative z-10">
-                            <div className="p-5 flex items-center justify-between border-b border-white/5">
-                                <h2 className="font-semibold text-white text-sm">Active Inventory</h2>
+                            <div className="p-5 flex items-center justify-between border-b border-[var(--divider)]">
+                                <h2 className="font-semibold text-[var(--text-main)] text-sm">Active Inventory</h2>
                                 <div className="relative">
-                                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-white/30" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <svg className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                         <circle cx="11" cy="11" r="8" />
                                         <line x1="21" y1="21" x2="16.65" y2="16.65" />
                                     </svg>
@@ -172,29 +174,29 @@ export default function DashboardClient({ items, createItemAction }: DashboardCl
                                         placeholder="Search..."
                                         value={searchQuery}
                                         onChange={(e) => { setSearchQuery(e.target.value); setCurrentPage(1); }}
-                                        className="pl-9 pr-4 py-2 border border-white/10 rounded-lg bg-white/5 text-sm text-white/80 w-40 focus:outline-none focus:border-white/20 placeholder:text-white/25"
+                                        className="pl-9 pr-4 py-2 border border-[var(--input-border)] rounded-lg bg-[var(--input-bg)] text-sm text-[var(--text-muted)] w-40 focus:outline-none focus:border-[var(--border-light)] placeholder:text-[var(--text-subtle)]"
                                     />
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-12 gap-4 px-5 py-3 text-[11px] font-medium text-white/30 uppercase tracking-wider border-b border-white/5">
+                            <div className="grid grid-cols-12 gap-4 px-5 py-3 text-[11px] font-medium text-[var(--text-subtle)] uppercase tracking-wider border-b border-[var(--divider)]">
                                 <div className="col-span-2">ID</div>
                                 <div className="col-span-3">Title</div>
                                 <div className="col-span-5">Description</div>
                                 <div className="col-span-2 text-right">Status</div>
                             </div>
 
-                            <div className="divide-y divide-white/5">
+                            <div className="divide-y divide-[var(--divider)]">
                                 {paginatedItems.length === 0 ? (
-                                    <div className="px-5 py-12 text-center text-white/30 text-sm">
+                                    <div className="px-5 py-12 text-center text-[var(--text-subtle)] text-sm">
                                         {items.length === 0 ? "No resources. Create one to get started." : "No matching resources."}
                                     </div>
                                 ) : (
                                     paginatedItems.map((item) => (
-                                        <div key={item.id} className="grid grid-cols-12 gap-4 px-5 py-3.5 hover:bg-white/[0.02] transition-colors items-center">
-                                            <div className="col-span-2 text-white/30 text-sm font-mono">#{item.id}</div>
-                                            <div className="col-span-3 font-medium text-white text-sm">{item.title}</div>
-                                            <div className="col-span-5 text-white/40 text-sm truncate">{item.description || "—"}</div>
+                                        <div key={item.id} className="grid grid-cols-12 gap-4 px-5 py-3.5 hover:bg-[var(--hover-bg)] transition-colors items-center">
+                                            <div className="col-span-2 text-[var(--text-subtle)] text-sm font-mono">#{item.id}</div>
+                                            <div className="col-span-3 font-medium text-[var(--text-main)] text-sm">{item.title}</div>
+                                            <div className="col-span-5 text-[var(--text-subtle)] text-sm truncate">{item.description || "—"}</div>
                                             <div className="col-span-2 flex justify-end">
                                                 <span className={`px-2.5 py-0.5 rounded-full text-[11px] font-medium border ${getStatusBadge(item.status)}`}>
                                                     {item.status || "Active"}
@@ -206,15 +208,15 @@ export default function DashboardClient({ items, createItemAction }: DashboardCl
                             </div>
 
                             {filteredItems.length > 0 && (
-                                <div className="px-5 py-3 border-t border-white/5 flex items-center justify-between">
-                                    <p className="text-xs text-white/30">
+                                <div className="px-5 py-3 border-t border-[var(--divider)] flex items-center justify-between">
+                                    <p className="text-xs text-[var(--text-subtle)]">
                                         {(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filteredItems.length)} of {filteredItems.length}
                                     </p>
                                     <div className="flex items-center gap-1">
-                                        <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 border border-white/10 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                                        <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage === 1} className="p-1.5 border border-[var(--border)] rounded-md hover:bg-[var(--hover-bg)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
                                         </button>
-                                        <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1.5 border border-white/10 rounded-md hover:bg-white/5 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
+                                        <button onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages} className="p-1.5 border border-[var(--border)] rounded-md hover:bg-[var(--hover-bg)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
                                         </button>
                                     </div>
