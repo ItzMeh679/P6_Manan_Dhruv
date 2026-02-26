@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Inter, Space_Grotesk } from "next/font/google";
 import "./globals.css";
 
 const inter = Inter({
@@ -7,9 +7,14 @@ const inter = Inter({
   subsets: ["latin"],
 });
 
+const spaceGrotesk = Space_Grotesk({
+  variable: "--font-space-grotesk",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
-  title: "Pinnacle - Ship Full-Stack Python & React Apps Faster",
-  description: "Production-ready boilerplate for Next.js, FastAPI, and PostgreSQL. Dockerized, type-safe, and ready to deploy in minutes, not days.",
+  title: "Pinnacle — Ship Full-Stack Apps Faster",
+  description: "Production-ready boilerplate for Next.js, FastAPI, and PostgreSQL. Type-safe, Dockerized, and ready to deploy.",
 };
 
 export default function RootLayout({
@@ -18,10 +23,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className="dark">
       <body
-        className={`${inter.variable} antialiased`}
-        style={{ fontFamily: "'Inter', sans-serif" }}
+        className={`${inter.variable} ${spaceGrotesk.variable} antialiased bg-[#050505] text-white`}
       >
         {children}
       </body>

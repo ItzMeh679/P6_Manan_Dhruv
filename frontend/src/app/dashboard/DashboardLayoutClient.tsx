@@ -25,10 +25,8 @@ export default function DashboardLayoutClient({
     const pathname = usePathname();
     const [isCollapsed, setIsCollapsed] = useState(false);
 
-    // Determine active page from pathname
     const getActivePage = () => {
         if (pathname === "/dashboard") return "dashboard";
-        // Extract the first segment after /dashboard/
         const segments = pathname.split("/").filter(Boolean);
         return segments[1] || "dashboard";
     };
@@ -39,17 +37,13 @@ export default function DashboardLayoutClient({
     };
 
     return (
-        <div className="min-h-screen bg-[#f8f9fb]">
-            {/* Sidebar */}
+        <div className="min-h-screen bg-[#050505]">
             <Sidebar
                 activePage={getActivePage()}
                 isCollapsed={isCollapsed}
                 onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
             />
-
-            {/* Main Content Wrapper */}
             <div className={`transition-all duration-300 ${isCollapsed ? "ml-16" : "ml-56"}`}>
-                {/* Top Navigation */}
                 <TopNav
                     userName={userName}
                     userEmail={userEmail}
@@ -57,8 +51,6 @@ export default function DashboardLayoutClient({
                     organizationName={organizationId || "Personal Workspace"}
                     onSignOut={handleSignOut}
                 />
-
-                {/* Page Content */}
                 {children}
             </div>
         </div>

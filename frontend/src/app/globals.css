@@ -1,16 +1,20 @@
-@import url('https://fonts.googleapis.com/css2?family=Noto+Sans:wght@400;500;700&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
 
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #111827;
-  --primary: #137fec;
-  --background-subtle: #f3f4f6;
-  --surface-light: #ffffff;
-  --border-light: #e5e7eb;
-  --text-main: #111827;
-  --text-muted: #4b5563;
+  --background: #050505;
+  --foreground: #fafafa;
+  --primary: #ffffff;
+  --background-subtle: #0a0a0a;
+  --surface: #111111;
+  --surface-light: #1a1a1a;
+  --border: #222222;
+  --border-light: #2a2a2a;
+  --text-main: #fafafa;
+  --text-muted: #888888;
+  --text-subtle: #555555;
+  --accent: #3b82f6;
 }
 
 @theme inline {
@@ -18,58 +22,40 @@
   --color-foreground: var(--foreground);
   --color-primary: var(--primary);
   --color-background-subtle: var(--background-subtle);
+  --color-surface: var(--surface);
   --color-surface-light: var(--surface-light);
+  --color-border: var(--border);
   --color-border-light: var(--border-light);
   --color-text-main: var(--text-main);
   --color-text-muted: var(--text-muted);
-  --font-sans: "Space Grotesk", sans-serif;
-  --font-body: "Noto Sans", sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+  --color-text-subtle: var(--text-subtle);
+  --color-accent: var(--accent);
+  --font-sans: "Inter", sans-serif;
+  --font-heading: "Space Grotesk", sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #333 transparent;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Space Grotesk", sans-serif;
-}
-
-.font-body {
-  font-family: "Noto Sans", sans-serif;
-}
-
-.terminal-scroll::-webkit-scrollbar {
-  width: 8px;
-}
-
-.terminal-scroll::-webkit-scrollbar-track {
-  background: #1c2a38;
-}
-
-.terminal-scroll::-webkit-scrollbar-thumb {
-  background: #233648;
-  border-radius: 4px;
-}
-
-.terminal-scroll::-webkit-scrollbar-thumb:hover {
-  background: #2e445a;
+  font-family: "Inter", sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 ::selection {
-  background-color: rgba(19, 127, 236, 0.3);
+  background-color: rgba(255, 255, 255, 0.15);
 }
 
-@keyframes pulse {
-
-  0%,
-  100% {
-    opacity: 1;
-  }
-
-  50% {
-    opacity: 0.5;
-  }
-}
-
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+/* Gooey nav color vars */
+:root {
+  --color-1: #ffffff;
+  --color-2: #3b82f6;
+  --color-3: #8b5cf6;
+  --color-4: #06b6d4;
 }
