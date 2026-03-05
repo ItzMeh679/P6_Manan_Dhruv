@@ -15,7 +15,7 @@ NGINX_LOG_PATTERN = re.compile(
 )
 
 
-def normalize_aws_log(raw_line: str) -> Optional[dict]:
+def normalize_aws_log(raw_line: str, source_id: int = 0, source_name: str = "") -> Optional[dict]:
     """Parse a raw Nginx/syslog line into the unified schema."""
     match = NGINX_LOG_PATTERN.match(raw_line.strip())
     if not match:
@@ -24,6 +24,8 @@ def normalize_aws_log(raw_line: str) -> Optional[dict]:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "source_ip": "unknown",
             "cloud_provider": "aws",
+            "source_id": source_id,
+            "source_name": source_name,
             "action": raw_line.strip()[:200],
             "status": "unknown",
             "raw_log": {"raw": raw_line},
@@ -41,27 +43,31 @@ def normalize_aws_log(raw_line: str) -> Optional[dict]:
         "timestamp": ts.isoformat(),
         "source_ip": match.group("ip"),
         "cloud_provider": "aws",
+        "source_id": source_id,
+        "source_name": source_name,
         "action": f"{match.group('method')} {match.group('path')}",
         "status": match.group("status"),
         "raw_log": {"raw": raw_line},
     }
 
 
-def normalize_azure_log(record: dict) -> dict:
+def normalize_azure_log(record: dict, source_id: int = 0, source_name: str = "") -> dict:
     """Normalize an Azure Diagnostic Settings JSON record."""
     return {
         "timestamp": record.get("time", datetime.now(timezone.utc).isoformat()),
         "source_ip": record.get("callerIpAddress", record.get("callerIPAddress", "unknown")),
         "cloud_provider": "azure",
+        "source_id": source_id,
+        "source_name": source_name,
         "action": record.get("operationName", record.get("action", "unknown")),
         "status": record.get("resultType", record.get("status", "unknown")),
         "raw_log": record,
     }
 
 
-def normalize_gcp_log(message: dict) -> dict:
+def normalize_gcp_log(message: dict, source_id: int = 0, source_name: str = "") -> dict:
     """Normalize a GCP Cloud Logging Pub/Sub message.
-    
+
     GCP sends base64-encoded JSON in message.data.
     """
     try:
@@ -83,15 +89,17 @@ def normalize_gcp_log(message: dict) -> dict:
         "timestamp": payload.get("timestamp", datetime.now(timezone.utc).isoformat()),
         "source_ip": request_meta.get("callerIp", "unknown"),
         "cloud_provider": "gcp",
+        "source_id": source_id,
+        "source_name": source_name,
         "action": proto.get("methodName", "unknown"),
         "status": proto.get("status", {}).get("message", "unknown") if isinstance(proto.get("status"), dict) else str(proto.get("status", "unknown")),
         "raw_log": payload,
     }
 
 
-def normalize_log(raw_data, cloud_provider: str) -> list[dict]:
+def normalize_log(raw_data, cloud_provider: str, source_id: int = 0, source_name: str = "") -> list[dict]:
     """Main entry point: normalize logs based on cloud provider.
-    
+
     Returns a list of normalized log dicts ready for Elasticsearch.
     """
     normalized = []
@@ -100,11 +108,11 @@ def normalize_log(raw_data, cloud_provider: str) -> list[dict]:
         # raw_data is a list of log lines
         if isinstance(raw_data, list):
             for line in raw_data:
-                result = normalize_aws_log(str(line))
+                result = normalize_aws_log(str(line), source_id, source_name)
                 if result:
                     normalized.append(result)
         else:
-            result = normalize_aws_log(str(raw_data))
+            result = normalize_aws_log(str(raw_data), source_id, source_name)
             if result:
                 normalized.append(result)
 
@@ -112,12 +120,34 @@ def normalize_log(raw_data, cloud_provider: str) -> list[dict]:
         # raw_data is a list of record dicts
         if isinstance(raw_data, list):
             for record in raw_data:
-                normalized.append(normalize_azure_log(record))
+                normalized.append(normalize_azure_log(record, source_id, source_name))
         else:
-            normalized.append(normalize_azure_log(raw_data))
+            normalized.append(normalize_azure_log(raw_data, source_id, source_name))
 
     elif cloud_provider == "gcp":
         # raw_data is a single message dict
-        normalized.append(normalize_gcp_log(raw_data))
+        normalized.append(normalize_gcp_log(raw_data, source_id, source_name))
 
+    return normalized
+
+
+def normalize_generic_logs(
+    logs: list[dict],
+    source_id: int = 0,
+    source_name: str = "",
+    cloud_provider: str = "generic",
+) -> list[dict]:
+    """Normalize generic JSON logs from Python/Node.js/Docker/cURL sources."""
+    normalized = []
+    for log_entry in logs:
+        normalized.append({
+            "timestamp": log_entry.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            "source_ip": log_entry.get("source_ip", log_entry.get("host", "unknown")),
+            "cloud_provider": cloud_provider,
+            "source_id": source_id,
+            "source_name": source_name,
+            "action": log_entry.get("action", log_entry.get("message", log_entry.get("msg", "unknown"))),
+            "status": str(log_entry.get("status", log_entry.get("level", "info"))),
+            "raw_log": log_entry,
+        })
     return normalized

@@ -53,6 +53,8 @@ async def ensure_index_template():
                                 "timestamp": {"type": "date"},
                                 "source_ip": {"type": "keyword"},
                                 "cloud_provider": {"type": "keyword"},
+                                "source_id": {"type": "integer"},
+                                "source_name": {"type": "keyword"},
                                 "action": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
                                 "status": {"type": "keyword"},
                                 "raw_log": {"type": "object", "enabled": False}
@@ -100,6 +102,8 @@ async def index_logs_bulk(logs: list[dict]) -> int:
 async def search_logs(
     q: str | None = None,
     cloud_provider: str | None = None,
+    source_id: int | None = None,
+    source_ids: list[int] | None = None,
     source_ip: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
@@ -112,10 +116,16 @@ async def search_logs(
     filters = []
 
     if q:
-        must.append({"multi_match": {"query": q, "fields": ["action", "source_ip", "status", "cloud_provider"]}})
+        must.append({"multi_match": {"query": q, "fields": ["action", "source_ip", "status", "cloud_provider", "source_name"]}})
 
     if cloud_provider:
         filters.append({"term": {"cloud_provider": cloud_provider}})
+
+    if source_id:
+        filters.append({"term": {"source_id": source_id}})
+
+    if source_ids:
+        filters.append({"terms": {"source_id": source_ids}})
 
     if source_ip:
         filters.append({"term": {"source_ip": source_ip}})
@@ -155,7 +165,7 @@ async def get_log_stats() -> dict:
     """Get aggregate statistics across all log indices."""
     es = get_es_client()
     try:
-        # Count by provider
+        # Count by provider + by source
         response = await es.search(
             index="logs-*",
             body={
@@ -163,6 +173,9 @@ async def get_log_stats() -> dict:
                 "aggs": {
                     "by_provider": {
                         "terms": {"field": "cloud_provider"}
+                    },
+                    "by_source": {
+                        "terms": {"field": "source_id", "size": 100}
                     }
                 }
             }
@@ -172,6 +185,9 @@ async def get_log_stats() -> dict:
         total = hits.get("total", {}).get("value", 0)
         buckets = response.get("aggregations", {}).get("by_provider", {}).get("buckets", [])
         logs_by_provider = {b["key"]: b["doc_count"] for b in buckets}
+
+        source_buckets = response.get("aggregations", {}).get("by_source", {}).get("buckets", [])
+        logs_by_source = {str(b["key"]): b["doc_count"] for b in source_buckets}
 
         # Get recent logs
         recent = await es.search(
@@ -187,8 +203,60 @@ async def get_log_stats() -> dict:
         return {
             "total_logs": total,
             "logs_by_provider": logs_by_provider,
+            "logs_by_source": logs_by_source,
             "recent_logs": recent_logs,
         }
     except Exception as e:
         logger.error("Stats query failed: %s", e)
-        return {"total_logs": 0, "logs_by_provider": {}, "recent_logs": []}
+        return {"total_logs": 0, "logs_by_provider": {}, "logs_by_source": {}, "recent_logs": []}
+
+
+async def get_source_stats(source_id: int) -> dict:
+    """Get statistics for a specific source."""
+    es = get_es_client()
+    try:
+        response = await es.search(
+            index="logs-*",
+            body={
+                "size": 0,
+                "query": {"term": {"source_id": source_id}},
+                "aggs": {
+                    "error_count": {
+                        "filter": {
+                            "bool": {
+                                "must_not": [
+                                    {"terms": {"status": ["200", "201", "204", "Success", "info", "debug"]}}
+                                ]
+                            }
+                        }
+                    },
+                    "recent_errors": {
+                        "filter": {
+                            "bool": {
+                                "must": [
+                                    {"range": {"timestamp": {"gte": "now-15m"}}}
+                                ],
+                                "must_not": [
+                                    {"terms": {"status": ["200", "201", "204", "Success", "info", "debug"]}}
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        )
+
+        hits = response.get("hits", {})
+        total = hits.get("total", {}).get("value", 0)
+        error_count = response.get("aggregations", {}).get("error_count", {}).get("doc_count", 0)
+        last_15_min_errors = response.get("aggregations", {}).get("recent_errors", {}).get("doc_count", 0)
+
+        return {
+            "source_id": source_id,
+            "total_logs": total,
+            "error_count": error_count,
+            "last_15_min_errors": last_15_min_errors,
+        }
+    except Exception as e:
+        logger.error("Source stats query failed: %s", e)
+        return {"source_id": source_id, "total_logs": 0, "error_count": 0, "last_15_min_errors": 0}

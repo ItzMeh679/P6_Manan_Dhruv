@@ -1,28 +1,42 @@
-from fastapi import Header, HTTPException
-import os
+from fastapi import Header, HTTPException, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
+from ..database import get_db
+from .. import models
 
 
 async def verify_ingest_token(
-    x_ingest_api_key: str = Header(...)
-):
-    """Verify the ingest API key sent by external cloud agents.
+    x_api_key: str = Header(..., alias="X-API-Key"),
+    db: AsyncSession = Depends(get_db),
+) -> models.LogSource:
+    """Verify the per-source API key sent by external agents.
     
-    This is separate from the BFF auth (X-Internal-Api-Key) used 
-    by the Next.js frontend. Cloud agents (Filebeat, Azure webhooks, 
-    GCP sinks) use this key to authenticate their log pushes.
+    Instead of comparing against a global .env var, this looks up 
+    the API key in the database to resolve it to a specific LogSource.
+    Returns the LogSource ORM object so routers can use source_id.
     """
-    expected_key = os.getenv("INGEST_API_KEY")
-
-    if not expected_key:
+    if not x_api_key:
         raise HTTPException(
-            status_code=500,
-            detail="Server misconfiguration: INGEST_API_KEY not set"
+            status_code=401,
+            detail="Missing X-API-Key header"
         )
 
-    if x_ingest_api_key != expected_key:
+    result = await db.execute(
+        select(models.LogSource).where(models.LogSource.api_key == x_api_key)
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
         raise HTTPException(
             status_code=403,
-            detail="Forbidden: Invalid Ingest API Key"
+            detail="Forbidden: Invalid API Key"
         )
 
-    return True
+    if not source.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Source is inactive"
+        )
+
+    return source

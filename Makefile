@@ -27,6 +27,13 @@ logs-%:
 clean:
 	docker compose down -v --remove-orphans
 
+# Fix frontend build by removing cache volumes (SAFE: does not touch DB)
+reset-frontend:
+	docker compose rm -f -s frontend
+	docker volume rm $$(basename "$$(pwd)")_frontend_node_modules || true
+	docker volume rm $$(basename "$$(pwd)")_frontend_next || true
+	docker compose up -d --build frontend
+
 # ==========================================
 # DATABASE MIGRATIONS
 # ==========================================

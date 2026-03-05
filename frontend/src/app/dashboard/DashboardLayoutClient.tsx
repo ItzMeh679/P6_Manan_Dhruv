@@ -37,13 +37,13 @@ export default function DashboardLayoutClient({
     };
 
     return (
-        <div className="min-h-screen bg-[var(--background)] transition-colors duration-300">
+        <div className="h-screen flex overflow-hidden bg-[var(--background)] transition-colors duration-300">
             <Sidebar
                 activePage={getActivePage()}
                 isCollapsed={isCollapsed}
                 onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
             />
-            <div className={`transition-all duration-300 ${isCollapsed ? "ml-16" : "ml-56"}`}>
+            <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isCollapsed ? "ml-16" : "ml-56"}`}>
                 <TopNav
                     userName={userName}
                     userEmail={userEmail}
@@ -51,7 +51,9 @@ export default function DashboardLayoutClient({
                     organizationName={organizationId || "Personal Workspace"}
                     onSignOut={handleSignOut}
                 />
-                {children}
+                <div className="flex-1 overflow-auto flex flex-col min-h-0">
+                    {children}
+                </div>
             </div>
         </div>
     );

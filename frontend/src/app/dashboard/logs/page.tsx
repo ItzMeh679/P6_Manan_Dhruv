@@ -1,8 +1,11 @@
-import { searchLogs } from "../../actions";
+import { searchLogs, getSources } from "../../actions";
 import LogExplorerClient from "./LogExplorerClient";
 
 export default async function LogExplorerPage() {
-    const initialLogs = await searchLogs();
+    const [initialLogs, sources] = await Promise.all([
+        searchLogs(),
+        getSources(),
+    ]);
 
-    return <LogExplorerClient initialData={initialLogs} />;
+    return <LogExplorerClient initialData={initialLogs} sources={sources} />;
 }

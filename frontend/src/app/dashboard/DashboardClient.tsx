@@ -5,10 +5,12 @@ import { useTheme } from "@/components/ThemeProvider";
 import StatsCard from "@/components/StatsCard";
 import DotGrid from '@/components/ui/DotGrid';
 import { BentoSection, ParticleCard } from '@/components/ui/MagicBento';
+import SafeDate from "@/components/ui/SafeDate";
 
 interface LogStats {
     total_logs: number;
     logs_by_provider: Record<string, number>;
+    logs_by_source: Record<string, number>;
     recent_logs: Record<string, unknown>[];
 }
 
@@ -17,6 +19,8 @@ interface LogSource {
     name: string;
     cloud_provider: string;
     is_active: boolean;
+    api_key: string;
+    status: string;
 }
 
 interface DashboardClientProps {
@@ -117,7 +121,7 @@ export default function DashboardClient({ stats, sources }: DashboardClientProps
                                                 </span>
                                                 <span className="text-sm text-[var(--text-main)]">{src.name}</span>
                                             </div>
-                                            <div className={`w-2 h-2 rounded-full ${src.is_active ? "bg-green-400" : "bg-red-400"}`} />
+                                            <div className={`w-2 h-2 rounded-full ${src.status === "connected" ? "bg-green-400" : src.status === "waiting" ? "bg-yellow-400 animate-pulse" : "bg-gray-400"}`} />
                                         </div>
                                     ))}
                                 </div>
@@ -157,14 +161,17 @@ export default function DashboardClient({ stats, sources }: DashboardClientProps
                                             <div className="col-span-4 text-sm text-[var(--text-main)] truncate">{log.action as string}</div>
                                             <div className="col-span-2">
                                                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${(log.status as string)?.startsWith("2") || (log.status as string) === "Success"
-                                                        ? "bg-green-500/10 text-green-400 border-green-500/20"
-                                                        : "bg-red-500/10 text-red-400 border-red-500/20"
+                                                    ? "bg-green-500/10 text-green-400 border-green-500/20"
+                                                    : "bg-red-500/10 text-red-400 border-red-500/20"
                                                     }`}>
                                                     {log.status as string}
                                                 </span>
                                             </div>
                                             <div className="col-span-2 text-right text-xs text-[var(--text-subtle)]">
-                                                {log.timestamp ? new Date(log.timestamp as string).toLocaleTimeString() : "—"}
+                                                <SafeDate
+                                                    date={log.timestamp as string}
+                                                    mode="toLocaleTimeString"
+                                                />
                                             </div>
                                         </div>
                                     ))
