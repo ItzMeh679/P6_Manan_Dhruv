@@ -11,7 +11,7 @@ interface SidebarProps {
 export default function Sidebar({ activePage = "dashboard", isCollapsed, onToggleCollapse }: SidebarProps) {
     const navItems = [
         {
-            name: "Dashboard",
+            name: "Overview",
             href: "/dashboard",
             icon: (
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -22,6 +22,30 @@ export default function Sidebar({ activePage = "dashboard", isCollapsed, onToggl
                 </svg>
             ),
             id: "dashboard",
+        },
+        {
+            name: "Log Explorer",
+            href: "/dashboard/logs",
+            icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                    <polyline points="10 9 9 9 8 9" />
+                </svg>
+            ),
+            id: "logs",
+        },
+        {
+            name: "Sources",
+            href: "/dashboard/sources",
+            icon: (
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+                </svg>
+            ),
+            id: "sources",
         },
     ];
 
@@ -35,12 +59,19 @@ export default function Sidebar({ activePage = "dashboard", isCollapsed, onToggl
                     </svg>
                 </div>
                 {!isCollapsed && (
-                    <span className="font-semibold text-[var(--text-main)] text-sm tracking-tight">Pinnacle</span>
+                    <span className="font-semibold text-[var(--text-main)] text-sm tracking-tight">Pinnacle SIEM</span>
                 )}
             </div>
 
+            {/* Section Label */}
+            {!isCollapsed && (
+                <div className="px-4 pt-4 pb-1">
+                    <span className="text-[10px] font-semibold text-[var(--text-subtle)] uppercase tracking-widest">Security</span>
+                </div>
+            )}
+
             {/* Nav */}
-            <nav className="flex-1 py-4 px-2">
+            <nav className="flex-1 py-2 px-2">
                 {navItems.map((item) => {
                     const isActive = activePage === item.id;
                     return (

@@ -1,14 +1,13 @@
-import { getItems, createItem } from "../actions";
+import { getLogStats, getSources } from "../actions";
 import DashboardClient from "./DashboardClient";
 
 export default async function Dashboard() {
-    // Fetch data from Python backend
-    const items = await getItems();
+    const [stats, sources] = await Promise.all([getLogStats(), getSources()]);
 
     return (
         <DashboardClient
-            items={items}
-            createItemAction={createItem}
+            stats={stats}
+            sources={sources}
         />
     );
 }
