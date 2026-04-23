@@ -109,3 +109,31 @@ class GCPIngestPayload(BaseModel):
 class GenericIngestPayload(BaseModel):
     """Generic log payload for Python/Node.js/Docker/cURL sources."""
     logs: List[dict]  # List of JSON log objects
+
+
+# ==========================================
+# Cloud Connection Schemas (OAuth)
+# ==========================================
+
+class CloudConnectionOut(BaseModel):
+    """Response schema for a connected cloud account."""
+    id: int
+    owner_id: str
+    provider: str  # "azure" or "gcp"
+    tenant_id: Optional[str] = None
+    created_at: datetime
+    # NOTE: Tokens are never exposed to the frontend
+
+    class Config:
+        from_attributes = True
+
+
+class DeployAzureLoggingRequest(BaseModel):
+    """Request to deploy Azure Diagnostic Setting on a resource."""
+    subscription_id: str
+    resource_uri: str  # e.g. /subscriptions/{sub}/resourceGroups/{rg}/providers/...
+
+
+class DeployGCPLoggingRequest(BaseModel):
+    """Request to deploy GCP Log Sink + Pub/Sub push to SIEM."""
+    project_id: str

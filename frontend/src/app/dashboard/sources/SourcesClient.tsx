@@ -1,19 +1,24 @@
 "use client";
 
 import { useState, useEffect, useCallback, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
+import { authClient } from "@/lib/auth-client";
 import DotGrid from "@/components/ui/DotGrid";
 import { BentoSection, ParticleCard } from "@/components/ui/MagicBento";
 import {
     createSource,
     deleteSource,
     getSourceStatus,
+    disconnectCloud,
     type LogSource,
+    type CloudConnection,
 } from "../../actions";
 
 interface SourcesClientProps {
     sources: LogSource[];
+    connections: CloudConnection[];
+    children?: React.ReactNode;
 }
 
 // ==========================================
@@ -162,11 +167,15 @@ fetch(URL, {
 // ==========================================
 // Main Component
 // ==========================================
-export default function SourcesClient({ sources }: SourcesClientProps) {
+export default function SourcesClient({ sources, connections, children }: SourcesClientProps) {
     const { theme } = useTheme();
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const { data: session } = authClient.useSession();
     const [isPending, startTransition] = useTransition();
     const [deletingId, setDeletingId] = useState<number | null>(null);
+    const [disconnectingId, setDisconnectingId] = useState<number | null>(null);
+    const [connectedToast, setConnectedToast] = useState<string | null>(null);
 
     // Wizard state
     const [wizardOpen, setWizardOpen] = useState(false);
@@ -177,6 +186,27 @@ export default function SourcesClient({ sources }: SourcesClientProps) {
     const [createdSource, setCreatedSource] = useState<LogSource | null>(null);
     const [isConnected, setIsConnected] = useState(false);
     const [copied, setCopied] = useState(false);
+
+    // Detect OAuth redirect success
+    useEffect(() => {
+        const connected = searchParams.get("connected");
+        if (connected) {
+            setConnectedToast(connected);
+            setTimeout(() => setConnectedToast(null), 5000);
+            router.replace("/dashboard/sources", { scroll: false });
+        }
+    }, [searchParams, router]);
+
+    const handleDisconnect = (id: number) => {
+        setDisconnectingId(id);
+        startTransition(async () => {
+            await disconnectCloud(id);
+            setDisconnectingId(null);
+        });
+    };
+
+    const azureConn = connections.find((c) => c.provider === "azure");
+    const gcpConn = connections.find((c) => c.provider === "gcp");
 
     // Poll for connection status
     useEffect(() => {
@@ -277,6 +307,144 @@ export default function SourcesClient({ sources }: SourcesClientProps) {
                         Add Source
                     </button>
                 </div>
+
+                {/* ========== SUCCESS TOAST ========== */}
+                {connectedToast && (
+                    <div className="mb-4 p-4 rounded-xl border border-green-500/30 bg-green-500/10 flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                        <div className="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center flex-shrink-0">
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgb(34,197,94)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-green-400">Cloud Account Connected!</p>
+                            <p className="text-xs text-green-400/70">{connectedToast === "azure" ? "Microsoft Azure" : "Google Cloud Platform"} has been linked. Browse your resources below.</p>
+                        </div>
+                    </div>
+                )}
+
+                {/* ========== CLOUD INTEGRATIONS ========== */}
+                <ParticleCard
+                    enableTilt={false}
+                    enableMagnetism={false}
+                    glowColor="100, 150, 255"
+                    className="card--border-glow bg-[var(--card-bg)] backdrop-blur-[20px] rounded-xl border border-[var(--divider)] mb-6"
+                >
+                    <div className="relative z-10">
+                        <div className="p-5 border-b border-[var(--divider)]">
+                            <h2 className="font-semibold text-[var(--text-main)] text-sm flex items-center gap-2">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-blue-400">
+                                    <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" />
+                                    <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                                    <line x1="12" y1="22.08" x2="12" y2="12" />
+                                </svg>
+                                1-Click Cloud Integration
+                                <span className="text-[var(--text-subtle)] font-normal text-xs">— Connect your cloud accounts via OAuth</span>
+                            </h2>
+                        </div>
+                        <div className="p-5 grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {/* Azure Card */}
+                            <div className="p-4 rounded-xl border border-[var(--divider)] bg-[var(--surface)] hover:border-blue-500/30 transition-all">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center shadow-lg shadow-blue-500/20">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M5.483 10.257l4.645-7.526L14.757 2 8.86 12.926l8.14.044L5.483 22l2.024-7.416-2.024-4.327z"/></svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-[var(--text-main)]">Microsoft Azure</p>
+                                            <p className="text-[11px] text-[var(--text-subtle)]">VMs, App Services, Functions, SQL</p>
+                                        </div>
+                                    </div>
+                                    {azureConn && (
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 text-green-400 border border-green-500/20">Connected</span>
+                                    )}
+                                </div>
+                                {azureConn ? (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-[var(--text-subtle)] flex-1">Connected {new Date(azureConn.created_at).toLocaleDateString()}</span>
+                                        <button
+                                            onClick={() => handleDisconnect(azureConn.id)}
+                                            disabled={disconnectingId === azureConn.id}
+                                            className="px-3 py-1 text-xs text-red-400 border border-red-500/20 rounded-md hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                        >
+                                            {disconnectingId === azureConn.id ? "..." : "Disconnect"}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => {
+                                            if (!session?.user?.id) return;
+                                            window.location.href = `/api/py/cloud/azure/login?user_id=${session.user.id}`;
+                                        }}
+                                        disabled={!session?.user?.id}
+                                        className="w-full py-2.5 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-500 hover:to-blue-400 transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {!session?.user?.id ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                Loading session...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M5.483 10.257l4.645-7.526L14.757 2 8.86 12.926l8.14.044L5.483 22l2.024-7.416-2.024-4.327z"/></svg>
+                                                Connect Azure Account
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* GCP Card */}
+                            <div className="p-4 rounded-xl border border-[var(--divider)] bg-[var(--surface)] hover:border-green-500/30 transition-all">
+                                <div className="flex items-center justify-between mb-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-emerald-400 flex items-center justify-center shadow-lg shadow-green-500/20">
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="white"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-semibold text-[var(--text-main)]">Google Cloud Platform</p>
+                                            <p className="text-[11px] text-[var(--text-subtle)]">Compute, Cloud Run, GKE, Cloud SQL</p>
+                                        </div>
+                                    </div>
+                                    {gcpConn && (
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-green-500/10 text-green-400 border border-green-500/20">Connected</span>
+                                    )}
+                                </div>
+                                {gcpConn ? (
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-xs text-[var(--text-subtle)] flex-1">Connected {new Date(gcpConn.created_at).toLocaleDateString()}</span>
+                                        <button
+                                            onClick={() => handleDisconnect(gcpConn.id)}
+                                            disabled={disconnectingId === gcpConn.id}
+                                            className="px-3 py-1 text-xs text-red-400 border border-red-500/20 rounded-md hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                        >
+                                            {disconnectingId === gcpConn.id ? "..." : "Disconnect"}
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button
+                                        onClick={() => {
+                                            if (!session?.user?.id) return;
+                                            window.location.href = `/api/py/cloud/gcp/login?user_id=${session.user.id}`;
+                                        }}
+                                        disabled={!session?.user?.id}
+                                        className="w-full py-2.5 rounded-lg text-sm font-medium text-white bg-gradient-to-r from-green-500 to-emerald-400 hover:from-green-400 hover:to-emerald-300 transition-all hover:scale-[1.01] active:scale-[0.99] shadow-lg shadow-green-500/20 flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {!session?.user?.id ? (
+                                            <>
+                                                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                                Loading session...
+                                            </>
+                                        ) : (
+                                            <>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z"/></svg>
+                                                Connect GCP Account
+                                            </>
+                                        )}
+                                    </button>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                </ParticleCard>
 
                 {/* ========== WIZARD MODAL ========== */}
                 {wizardOpen && (
@@ -572,6 +740,7 @@ export default function SourcesClient({ sources }: SourcesClientProps) {
                     </div>
                 </ParticleCard>
             </BentoSection>
+            {children}
         </main>
     );
 }

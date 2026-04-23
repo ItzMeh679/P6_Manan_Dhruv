@@ -115,7 +115,7 @@ export default function LogExplorerClient({ initialData, sources }: LogExplorerC
         if (isLive) {
             liveIntervalRef.current = setInterval(() => {
                 doSearch(1);
-            }, 4000);
+            }, 2000);
         } else {
             if (liveIntervalRef.current) clearInterval(liveIntervalRef.current);
         }

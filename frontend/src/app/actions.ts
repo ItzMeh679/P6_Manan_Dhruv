@@ -145,3 +145,79 @@ export async function deleteSource(sourceId: number) {
     revalidatePath("/dashboard/sources");
     revalidatePath("/dashboard");
 }
+
+
+// ==========================================
+// Cloud Connection Types
+// ==========================================
+
+export interface CloudConnection {
+    id: number;
+    owner_id: string;
+    provider: string; // "azure" | "gcp"
+    tenant_id?: string;
+    created_at: string;
+}
+
+export interface CloudResource {
+    id?: string;
+    name: string;
+    type?: string;
+    location?: string;
+    subscription_id?: string;
+    subscription_name?: string;
+    project_id?: string;
+    state?: string;
+}
+
+// ==========================================
+// Cloud Connection Actions
+// ==========================================
+
+export async function getCloudConnections(): Promise<CloudConnection[]> {
+    try {
+        return await pythonApi<CloudConnection[]>("/cloud/connections", { cache: "no-store" });
+    } catch (e) {
+        console.error("Failed to fetch cloud connections:", e);
+        return [];
+    }
+}
+
+export async function disconnectCloud(connectionId: number) {
+    await pythonApi(`/cloud/connections/${connectionId}`, {
+        method: "DELETE",
+    });
+
+    revalidatePath("/dashboard/sources");
+}
+
+export async function getCloudResources(provider: string): Promise<CloudResource[]> {
+    try {
+        const result = await pythonApi<{ provider: string; resources: CloudResource[] }>(
+            `/cloud/${provider}/resources`,
+            { cache: "no-store" }
+        );
+        return result.resources;
+    } catch (e) {
+        console.error(`Failed to fetch ${provider} resources:`, e);
+        return [];
+    }
+}
+
+export async function deployCloudLogging(
+    provider: string,
+    params: { subscription_id?: string; resource_uri?: string; project_id?: string }
+): Promise<{ status: string; detail?: string }> {
+    try {
+        return await pythonApi<{ status: string; detail?: string }>(
+            `/cloud/${provider}/deploy-logging`,
+            {
+                method: "POST",
+                body: JSON.stringify(params),
+            }
+        );
+    } catch (e) {
+        console.error(`Failed to deploy ${provider} logging:`, e);
+        return { status: "error", detail: String(e) };
+    }
+}

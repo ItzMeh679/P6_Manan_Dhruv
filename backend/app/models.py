@@ -28,3 +28,19 @@ class LogSource(Base):
 
     # Links to user table managed by Drizzle (no SQLAlchemy FK)
     owner_id = Column(String, nullable=False)
+
+
+class CloudConnection(Base):
+    """Stores OAuth tokens for connected cloud accounts (Azure, GCP).
+    Enables 1-click provisioning of log forwarding infrastructure."""
+    __tablename__ = "cloud_connections"
+
+    id = Column(Integer, primary_key=True, index=True)
+    owner_id = Column(String, nullable=False)  # Matches Next.js user.id
+    provider = Column(String, nullable=False)  # "azure" or "gcp"
+    tenant_id = Column(String, nullable=True)  # Useful for Azure
+    access_token = Column(Text, nullable=False)
+    refresh_token = Column(Text, nullable=False)
+    expires_at = Column(DateTime(timezone=True), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+    workspace_id = Column(Text, nullable=True)  # Azure Log Analytics workspace ARM ID

@@ -7,4 +7,16 @@ export default defineConfig({
     dbCredentials: {
         url: process.env.DATABASE_URL!,
     },
+    // Only manage tables defined in the Drizzle schema.
+    // Prevents drizzle-kit push from dropping Alembic-managed tables
+    // (cloud_connections, log_sources, alembic_version).
+    tablesFilter: [
+        "user",
+        "session",
+        "account",
+        "verification",
+        "organization",
+        "member",
+        "invitation",
+    ],
 });

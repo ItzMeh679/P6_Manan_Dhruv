@@ -16,7 +16,8 @@ Directory structure:
     │   │   ├── script.py.mako
     │   │   └── versions/
     │   │       ├── 001_initial.py
-    │   │       └── 002_siem_tables.py
+    │   │       ├── 002_siem_tables.py
+    │   │       └── 003_add_api_key_status.py
     │   └── app/
     │       ├── __init__.py
     │       ├── database.py
@@ -39,63 +40,70 @@ Directory structure:
     ├── deployment/
     │   ├── azure_deploy.sh
     │   └── prod.env.example
-    └── frontend/
-        ├── README.md
-        ├── Dockerfile
-        ├── drizzle.config.ts
-        ├── eslint.config.mjs
-        ├── next.config.ts
-        ├── package.json
-        ├── postcss.config.mjs
-        ├── tsconfig.json
-        ├── .dockerignore
-        └── src/
-            ├── app/
-            │   ├── actions.ts
-            │   ├── globals.css
-            │   ├── LandingClient.tsx
-            │   ├── layout.tsx
-            │   ├── page.tsx
-            │   ├── api/
-            │   │   └── auth/
-            │   │       └── [...all]/
-            │   │           └── route.ts
-            │   ├── dashboard/
-            │   │   ├── DashboardClient.tsx
-            │   │   ├── DashboardLayoutClient.tsx
-            │   │   ├── layout.tsx
-            │   │   ├── page.tsx
-            │   │   ├── logs/
-            │   │   │   ├── LogExplorerClient.tsx
-            │   │   │   └── page.tsx
-            │   │   └── sources/
-            │   │       ├── page.tsx
-            │   │       └── SourcesClient.tsx
-            │   └── sign-in/
-            │       └── page.tsx
-            ├── components/
-            │   ├── Sidebar.tsx
-            │   ├── StatsCard.tsx
-            │   ├── ThemeProvider.tsx
-            │   ├── ThemeToggle.tsx
-            │   ├── TopNav.tsx
-            │   └── ui/
-            │       ├── BounceCards.tsx
-            │       ├── CardSwap.tsx
-            │       ├── DarkVeil.tsx
-            │       ├── DotGrid.tsx
-            │       ├── GlassIcons.tsx
-            │       ├── GooeyNav.tsx
-            │       ├── MagicBento.tsx
-            │       ├── Stepper.tsx
-            │       └── Threads.tsx
-            ├── db/
-            │   ├── index.ts
-            │   └── schema.ts
-            └── lib/
-                ├── api.ts
-                ├── auth-client.ts
-                └── auth.ts
+    ├── frontend/
+    │   ├── README.md
+    │   ├── Dockerfile
+    │   ├── drizzle.config.ts
+    │   ├── eslint.config.mjs
+    │   ├── next.config.ts
+    │   ├── package.json
+    │   ├── postcss.config.mjs
+    │   ├── tsconfig.json
+    │   ├── .dockerignore
+    │   └── src/
+    │       ├── app/
+    │       │   ├── actions.ts
+    │       │   ├── globals.css
+    │       │   ├── LandingClient.tsx
+    │       │   ├── layout.tsx
+    │       │   ├── page.tsx
+    │       │   ├── api/
+    │       │   │   └── auth/
+    │       │   │       └── [...all]/
+    │       │   │           └── route.ts
+    │       │   ├── dashboard/
+    │       │   │   ├── DashboardClient.tsx
+    │       │   │   ├── DashboardLayoutClient.tsx
+    │       │   │   ├── layout.tsx
+    │       │   │   ├── page.tsx
+    │       │   │   ├── logs/
+    │       │   │   │   ├── LogExplorerClient.tsx
+    │       │   │   │   └── page.tsx
+    │       │   │   └── sources/
+    │       │   │       ├── page.tsx
+    │       │   │       └── SourcesClient.tsx
+    │       │   └── sign-in/
+    │       │       └── page.tsx
+    │       ├── components/
+    │       │   ├── Sidebar.tsx
+    │       │   ├── StatsCard.tsx
+    │       │   ├── ThemeProvider.tsx
+    │       │   ├── ThemeToggle.tsx
+    │       │   ├── TopNav.tsx
+    │       │   └── ui/
+    │       │       ├── BounceCards.tsx
+    │       │       ├── CardSwap.tsx
+    │       │       ├── DarkVeil.tsx
+    │       │       ├── DotGrid.tsx
+    │       │       ├── GlassIcons.tsx
+    │       │       ├── GooeyNav.tsx
+    │       │       ├── MagicBento.tsx
+    │       │       ├── SafeDate.tsx
+    │       │       ├── Stepper.tsx
+    │       │       └── Threads.tsx
+    │       ├── db/
+    │       │   ├── index.ts
+    │       │   └── schema.ts
+    │       └── lib/
+    │           ├── api.ts
+    │           ├── auth-client.ts
+    │           └── auth.ts
+    ├── nginx/
+    │   └── nginx.conf.template
+    └── scripts/
+        ├── deploy_log_generator.sh
+        ├── Dockerfile.loggenerator
+        └── generate_logs.py
 
 ================================================
 FILE: README.md
@@ -357,8 +365,8 @@ services:
         condition: service_started
     env_file:
       - .env
-    ports:
-      - "8000:8000" # Reserved for FastAPI
+    expose:
+      - "8000" # Reserved for FastAPI
 
   # 4. Frontend Service
   frontend:
@@ -378,8 +386,25 @@ services:
       - DATABASE_URL=${DATABASE_URL}
       - BETTER_AUTH_URL=${BETTER_AUTH_URL}
       - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
+    expose:
+      - "3000" # Reserved for Next.js
+
+  # 5. Nginx Proxy Service
+  nginx:
+    image: nginx:alpine
+    container_name: nginx_proxy
+    restart: always
+    depends_on:
+      - frontend
+      - backend
     ports:
-      - "3000:3000" # Reserved for Next.js
+      - "80:80"
+    volumes:
+      - ./nginx/nginx.conf.template:/etc/nginx/templates/default.conf.template:ro
+    environment:
+      - NGINX_FORWARDED_PROTO=${NGINX_FORWARDED_PROTO:-http}
+      - NGINX_HOST=${NGINX_HOST:-localhost}
+      - NGINX_SERVER_NAME=${NGINX_SERVER_NAME:-localhost}
 
 volumes:
   postgres_data:
@@ -420,6 +445,13 @@ logs-%:
 # Remove all containers, networks, and volumes
 clean:
 	docker compose down -v --remove-orphans
+
+# Fix frontend build by removing cache volumes (SAFE: does not touch DB)
+reset-frontend:
+	docker compose rm -f -s frontend
+	docker volume rm $$(basename "$$(pwd)")_frontend_node_modules || true
+	docker volume rm $$(basename "$$(pwd)")_frontend_next || true
+	docker compose up -d --build frontend
 
 # ==========================================
 # DATABASE MIGRATIONS
@@ -487,8 +519,8 @@ DB_PORT=5432
 # Used by Next.js inside Docker
 DATABASE_URL=postgres://crm_admin:your_secure_password_here@db:5432/insurance_crm_db
 # Used by Better Auth Client side (Browser needs localhost)
-BETTER_AUTH_URL=http://localhost:3000
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+BETTER_AUTH_URL=http://localhost
+NEXT_PUBLIC_APP_URL=http://localhost
 
 # Backend Config
 PYTHON_ENV=development
@@ -908,6 +940,58 @@ def downgrade() -> None:
 
 
 ================================================
+FILE: backend/alembic/versions/003_add_api_key_status.py
+================================================
+"""add_api_key_and_status_to_log_sources
+
+Revision ID: 003
+Revises: 002
+Create Date: 2026-03-05 10:00:00.000000
+
+"""
+from alembic import op
+import sqlalchemy as sa
+import uuid
+
+# revision identifiers, used by Alembic.
+revision = '003'
+down_revision = '002'
+branch_labels = None
+depends_on = None
+
+
+def generate_api_key():
+    return f"ps_{uuid.uuid4().hex}"
+
+
+def upgrade() -> None:
+    # Add api_key column (nullable first, then backfill, then make non-nullable)
+    op.add_column('log_sources', sa.Column('api_key', sa.String(), nullable=True))
+    op.add_column('log_sources', sa.Column('status', sa.String(), nullable=True, server_default='waiting'))
+
+    # Backfill existing rows with unique API keys
+    conn = op.get_bind()
+    sources = conn.execute(sa.text("SELECT id FROM log_sources")).fetchall()
+    for source in sources:
+        api_key = generate_api_key()
+        conn.execute(
+            sa.text("UPDATE log_sources SET api_key = :key, status = 'connected' WHERE id = :id"),
+            {"key": api_key, "id": source[0]}
+        )
+
+    # Make api_key non-nullable and unique
+    op.alter_column('log_sources', 'api_key', nullable=False)
+    op.create_unique_constraint('uq_log_sources_api_key', 'log_sources', ['api_key'])
+
+
+def downgrade() -> None:
+    op.drop_constraint('uq_log_sources_api_key', 'log_sources', type_='unique')
+    op.drop_column('log_sources', 'status')
+    op.drop_column('log_sources', 'api_key')
+
+
+
+================================================
 FILE: backend/app/__init__.py
 ================================================
 # Backend application package
@@ -1012,21 +1096,33 @@ def read_root():
 ================================================
 FILE: backend/app/models.py
 ================================================
+import uuid
 from sqlalchemy import Column, Integer, String, Boolean, DateTime, Text
 from sqlalchemy.sql import func
 from .database import Base
 
 
+def generate_api_key() -> str:
+    """Generate a unique API key for a log source."""
+    return f"ps_{uuid.uuid4().hex}"
+
+
 class LogSource(Base):
-    """Tracks configured cloud log sources (AWS, Azure, GCP)."""
+    """Tracks configured cloud log sources (AWS, Azure, GCP, Python, Node.js, Docker, etc.)."""
     __tablename__ = "log_sources"
 
     id = Column(Integer, primary_key=True, index=True)
-    name = Column(String, nullable=False)  # e.g. "Production AWS EC2"
-    cloud_provider = Column(String, nullable=False)  # "aws" | "azure" | "gcp"
+    name = Column(String, nullable=False)  # e.g. "Production Billing Service"
+    cloud_provider = Column(String, nullable=False)  # "aws" | "azure" | "gcp" | "python" | "nodejs" | "docker" | "curl"
     description = Column(Text, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Per-source API key for ingestion auth
+    api_key = Column(String, unique=True, nullable=False, default=generate_api_key)
+
+    # Connection status: "waiting" | "connected" | "inactive"
+    status = Column(String, nullable=False, default="waiting")
 
     # Links to user table managed by Drizzle (no SQLAlchemy FK)
     owner_id = Column(String, nullable=False)
@@ -1047,7 +1143,7 @@ from datetime import datetime
 
 class LogSourceBase(BaseModel):
     name: str
-    cloud_provider: str  # "aws" | "azure" | "gcp"
+    cloud_provider: str  # "aws" | "azure" | "gcp" | "python" | "nodejs" | "docker" | "curl"
     description: Optional[str] = None
     is_active: bool = True
 
@@ -1060,9 +1156,18 @@ class LogSource(LogSourceBase):
     id: int
     owner_id: str
     created_at: datetime
+    api_key: str
+    status: str  # "waiting" | "connected" | "inactive"
 
     class Config:
         from_attributes = True
+
+
+class LogSourceStatus(BaseModel):
+    """Lightweight schema for checking source connection status."""
+    id: int
+    status: str
+    name: str
 
 
 # ==========================================
@@ -1074,6 +1179,8 @@ class NormalizedLog(BaseModel):
     timestamp: datetime
     source_ip: str
     cloud_provider: str  # "aws" | "azure" | "gcp"
+    source_id: int  # Links to LogSource.id
+    source_name: str  # Friendly name for display
     action: str  # e.g. "GET /", "FunctionAppTrigger", "storage.objects.get"
     status: str  # e.g. "200", "Success"
     raw_log: Any  # Original untouched log for forensics
@@ -1086,6 +1193,8 @@ class NormalizedLog(BaseModel):
 class LogSearchQuery(BaseModel):
     q: Optional[str] = None  # Full-text search query
     cloud_provider: Optional[str] = None
+    source_id: Optional[int] = None
+    source_ids: Optional[List[int]] = None  # Multi-source filtering
     source_ip: Optional[str] = None
     start_date: Optional[str] = None  # ISO format
     end_date: Optional[str] = None  # ISO format
@@ -1103,7 +1212,16 @@ class LogSearchResult(BaseModel):
 class LogStats(BaseModel):
     total_logs: int
     logs_by_provider: dict  # {"aws": 100, "azure": 50, "gcp": 25}
+    logs_by_source: dict  # {source_id: count}
     recent_logs: List[dict]
+
+
+class SourceStats(BaseModel):
+    """Quick stats for a specific source."""
+    source_id: int
+    total_logs: int
+    error_count: int
+    last_15_min_errors: int
 
 
 # ==========================================
@@ -1122,6 +1240,11 @@ class GCPIngestPayload(BaseModel):
     message: dict  # GCP Pub/Sub message wrapper
 
 
+class GenericIngestPayload(BaseModel):
+    """Generic log payload for Python/Node.js/Docker/cURL sources."""
+    logs: List[dict]  # List of JSON log objects
+
+
 
 ================================================
 FILE: backend/app/core/__init__.py
@@ -1132,34 +1255,48 @@ FILE: backend/app/core/__init__.py
 ================================================
 FILE: backend/app/core/ingest_auth.py
 ================================================
-from fastapi import Header, HTTPException
-import os
+from fastapi import Header, HTTPException, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
+from ..database import get_db
+from .. import models
 
 
 async def verify_ingest_token(
-    x_ingest_api_key: str = Header(...)
-):
-    """Verify the ingest API key sent by external cloud agents.
+    x_api_key: str = Header(..., alias="X-API-Key"),
+    db: AsyncSession = Depends(get_db),
+) -> models.LogSource:
+    """Verify the per-source API key sent by external agents.
     
-    This is separate from the BFF auth (X-Internal-Api-Key) used 
-    by the Next.js frontend. Cloud agents (Filebeat, Azure webhooks, 
-    GCP sinks) use this key to authenticate their log pushes.
+    Instead of comparing against a global .env var, this looks up 
+    the API key in the database to resolve it to a specific LogSource.
+    Returns the LogSource ORM object so routers can use source_id.
     """
-    expected_key = os.getenv("INGEST_API_KEY")
-
-    if not expected_key:
+    if not x_api_key:
         raise HTTPException(
-            status_code=500,
-            detail="Server misconfiguration: INGEST_API_KEY not set"
+            status_code=401,
+            detail="Missing X-API-Key header"
         )
 
-    if x_ingest_api_key != expected_key:
+    result = await db.execute(
+        select(models.LogSource).where(models.LogSource.api_key == x_api_key)
+    )
+    source = result.scalar_one_or_none()
+
+    if not source:
         raise HTTPException(
             status_code=403,
-            detail="Forbidden: Invalid Ingest API Key"
+            detail="Forbidden: Invalid API Key"
         )
 
-    return True
+    if not source.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Forbidden: Source is inactive"
+        )
+
+    return source
 
 
 
@@ -1173,76 +1310,124 @@ FILE: backend/app/routers/__init__.py
 FILE: backend/app/routers/ingest.py
 ================================================
 from fastapi import APIRouter, Depends
-from .. import schemas
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from .. import schemas, models
 from ..services import normalizer
 from ..services.elasticsearch import index_logs_bulk
 from ..core.ingest_auth import verify_ingest_token
+from ..database import get_db
 
 router = APIRouter(prefix="/ingest", tags=["Log Ingestion"])
 
 
-@router.post("/aws", summary="Ingest AWS logs (Filebeat)")
+async def _flip_status_if_waiting(source: models.LogSource, db: AsyncSession):
+    """On first successful ingest, flip source status from 'waiting' to 'connected'."""
+    if source.status == "waiting":
+        source.status = "connected"
+        db.add(source)
+        await db.commit()
+        await db.refresh(source)
+
+
+@router.post("/aws", summary="Ingest AWS logs")
 async def ingest_aws(
     payload: schemas.AWSIngestPayload,
-    _: bool = Depends(verify_ingest_token),
+    source: models.LogSource = Depends(verify_ingest_token),
+    db: AsyncSession = Depends(get_db),
 ):
     """Receive raw Nginx/syslog lines from Filebeat agent on AWS EC2.
-    
+
     Expected format:
     ```json
     {"logs": ["192.168.1.1 - - [10/Oct/2023:13:55:36] \"GET / HTTP/1.1\" 200"]}
     ```
     """
-    normalized = normalizer.normalize_log(payload.logs, "aws")
+    normalized = normalizer.normalize_log(
+        payload.logs, "aws",
+        source_id=source.id, source_name=source.name,
+    )
     indexed = await index_logs_bulk(normalized)
+    await _flip_status_if_waiting(source, db)
     return {
         "status": "ok",
         "cloud_provider": "aws",
+        "source_id": source.id,
         "received": len(payload.logs),
         "indexed": indexed,
     }
 
 
-@router.post("/azure", summary="Ingest Azure logs (Diagnostic Settings Webhook)")
+@router.post("/azure", summary="Ingest Azure logs")
 async def ingest_azure(
     payload: schemas.AzureIngestPayload,
-    _: bool = Depends(verify_ingest_token),
+    source: models.LogSource = Depends(verify_ingest_token),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Receive Azure Diagnostic Settings JSON records via webhook.
-    
-    Expected format:
-    ```json
-    {"records": [{"callerIpAddress": "10.0.0.1", "operationName": "...", "resultType": "Success"}]}
-    ```
-    """
-    normalized = normalizer.normalize_log(payload.records, "azure")
+    """Receive Azure Diagnostic Settings JSON records via webhook."""
+    normalized = normalizer.normalize_log(
+        payload.records, "azure",
+        source_id=source.id, source_name=source.name,
+    )
     indexed = await index_logs_bulk(normalized)
+    await _flip_status_if_waiting(source, db)
     return {
         "status": "ok",
         "cloud_provider": "azure",
+        "source_id": source.id,
         "received": len(payload.records),
         "indexed": indexed,
     }
 
 
-@router.post("/gcp", summary="Ingest GCP logs (Log Router Sink)")
+@router.post("/gcp", summary="Ingest GCP logs")
 async def ingest_gcp(
     payload: schemas.GCPIngestPayload,
-    _: bool = Depends(verify_ingest_token),
+    source: models.LogSource = Depends(verify_ingest_token),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Receive GCP Cloud Logging Pub/Sub messages via HTTP sink.
-    
-    Expected format:
-    ```json
-    {"message": {"data": "<base64-encoded-json>"}}
-    ```
-    """
-    normalized = normalizer.normalize_log(payload.message, "gcp")
+    """Receive GCP Cloud Logging Pub/Sub messages via HTTP sink."""
+    normalized = normalizer.normalize_log(
+        payload.message, "gcp",
+        source_id=source.id, source_name=source.name,
+    )
     indexed = await index_logs_bulk(normalized)
+    await _flip_status_if_waiting(source, db)
     return {
         "status": "ok",
         "cloud_provider": "gcp",
+        "source_id": source.id,
         "received": 1,
+        "indexed": indexed,
+    }
+
+
+@router.post("/generic", summary="Ingest generic logs (Python, Node.js, Docker, cURL)")
+async def ingest_generic(
+    payload: schemas.GenericIngestPayload,
+    source: models.LogSource = Depends(verify_ingest_token),
+    db: AsyncSession = Depends(get_db),
+):
+    """Receive JSON log objects from any application (Python, Node.js, Docker, cURL).
+
+    Expected format:
+    ```json
+    {"logs": [{"message": "User logged in", "level": "info", "timestamp": "..."}]}
+    ```
+    """
+    normalized = normalizer.normalize_generic_logs(
+        payload.logs,
+        source_id=source.id,
+        source_name=source.name,
+        cloud_provider=source.cloud_provider,
+    )
+    indexed = await index_logs_bulk(normalized)
+    await _flip_status_if_waiting(source, db)
+    return {
+        "status": "ok",
+        "source_id": source.id,
+        "source_type": source.cloud_provider,
+        "received": len(payload.logs),
         "indexed": indexed,
     }
 
@@ -1252,8 +1437,8 @@ async def ingest_gcp(
 FILE: backend/app/routers/search.py
 ================================================
 from fastapi import APIRouter, Depends, Query
-from typing import Optional
-from ..services.elasticsearch import search_logs, get_log_stats
+from typing import Optional, List
+from ..services.elasticsearch import search_logs, get_log_stats, get_source_stats
 from ..deps import get_current_user_id
 
 router = APIRouter(prefix="/logs", tags=["Log Search"])
@@ -1262,7 +1447,9 @@ router = APIRouter(prefix="/logs", tags=["Log Search"])
 @router.get("/search", summary="Search logs")
 async def search(
     q: Optional[str] = Query(None, description="Full-text search query"),
-    cloud_provider: Optional[str] = Query(None, description="Filter by cloud provider: aws, azure, gcp"),
+    cloud_provider: Optional[str] = Query(None, description="Filter by cloud provider"),
+    source_id: Optional[int] = Query(None, description="Filter by specific source ID"),
+    source_ids: Optional[str] = Query(None, description="Comma-separated source IDs for multi-source filtering"),
     source_ip: Optional[str] = Query(None, description="Filter by source IP"),
     start_date: Optional[str] = Query(None, description="Start date (ISO format)"),
     end_date: Optional[str] = Query(None, description="End date (ISO format)"),
@@ -1271,12 +1458,23 @@ async def search(
     user_id: str = Depends(get_current_user_id),
 ):
     """Search and filter logs stored in Elasticsearch.
-    
+
+    Supports filtering by source_id or multiple source_ids (comma-separated).
     Protected by BFF auth — only authenticated dashboard users can search.
     """
+    # Parse comma-separated source IDs
+    parsed_source_ids: Optional[List[int]] = None
+    if source_ids:
+        try:
+            parsed_source_ids = [int(sid.strip()) for sid in source_ids.split(",") if sid.strip()]
+        except ValueError:
+            parsed_source_ids = None
+
     result = await search_logs(
         q=q,
         cloud_provider=cloud_provider,
+        source_id=source_id,
+        source_ids=parsed_source_ids,
         source_ip=source_ip,
         start_date=start_date,
         end_date=end_date,
@@ -1290,11 +1488,23 @@ async def search(
 async def stats(
     user_id: str = Depends(get_current_user_id),
 ):
-    """Get aggregate statistics: total logs, breakdown by provider, recent logs.
-    
+    """Get aggregate statistics: total logs, breakdown by provider, by source, recent logs.
+
     Protected by BFF auth.
     """
     return await get_log_stats()
+
+
+@router.get("/stats/{source_id}", summary="Get source-specific stats")
+async def source_stats(
+    source_id: int,
+    user_id: str = Depends(get_current_user_id),
+):
+    """Get quick stats for a specific source (total logs, error rates).
+
+    Protected by BFF auth.
+    """
+    return await get_source_stats(source_id)
 
 
 
@@ -1308,10 +1518,14 @@ from typing import List
 
 from .. import models, schemas, database
 from ..deps import get_current_user_id
+from ..models import generate_api_key
 
 router = APIRouter(prefix="/sources", tags=["Log Sources"])
 
 get_db = database.get_db
+
+# Allowed source types
+ALLOWED_PROVIDERS = ("aws", "azure", "gcp", "python", "nodejs", "docker", "curl")
 
 
 @router.get("/", response_model=List[schemas.LogSource], summary="List log sources")
@@ -1319,7 +1533,7 @@ async def list_sources(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    """List all configured cloud log sources for the current user."""
+    """List all configured log sources for the current user."""
     result = await db.execute(
         select(models.LogSource)
         .where(models.LogSource.owner_id == user_id)
@@ -1334,18 +1548,42 @@ async def create_source(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    """Register a new cloud log source (AWS, Azure, or GCP)."""
-    if source.cloud_provider not in ("aws", "azure", "gcp"):
+    """Register a new log source. Auto-generates a unique API key."""
+    if source.cloud_provider not in ALLOWED_PROVIDERS:
         raise HTTPException(
             status_code=400,
-            detail="cloud_provider must be one of: aws, azure, gcp"
+            detail=f"cloud_provider must be one of: {', '.join(ALLOWED_PROVIDERS)}"
         )
 
-    db_source = models.LogSource(**source.model_dump(), owner_id=user_id)
+    db_source = models.LogSource(
+        **source.model_dump(),
+        owner_id=user_id,
+        api_key=generate_api_key(),
+        status="waiting",
+    )
     db.add(db_source)
     await db.commit()
     await db.refresh(db_source)
     return db_source
+
+
+@router.get("/{source_id}/status", response_model=schemas.LogSourceStatus, summary="Get source status")
+async def get_source_status(
+    source_id: int,
+    db: AsyncSession = Depends(get_db),
+    user_id: str = Depends(get_current_user_id),
+):
+    """Check the connection status of a specific source (for polling during onboarding)."""
+    result = await db.execute(
+        select(models.LogSource)
+        .where(models.LogSource.id == source_id)
+        .where(models.LogSource.owner_id == user_id)
+    )
+    source = result.scalar_one_or_none()
+    if not source:
+        raise HTTPException(status_code=404, detail="Source not found")
+
+    return {"id": source.id, "status": source.status, "name": source.name}
 
 
 @router.delete("/{source_id}", summary="Delete log source")
@@ -1354,7 +1592,7 @@ async def delete_source(
     db: AsyncSession = Depends(get_db),
     user_id: str = Depends(get_current_user_id),
 ):
-    """Delete a configured cloud log source."""
+    """Delete a configured log source."""
     result = await db.execute(
         select(models.LogSource)
         .where(models.LogSource.id == source_id)
@@ -1434,6 +1672,8 @@ async def ensure_index_template():
                                 "timestamp": {"type": "date"},
                                 "source_ip": {"type": "keyword"},
                                 "cloud_provider": {"type": "keyword"},
+                                "source_id": {"type": "integer"},
+                                "source_name": {"type": "keyword"},
                                 "action": {"type": "text", "fields": {"keyword": {"type": "keyword"}}},
                                 "status": {"type": "keyword"},
                                 "raw_log": {"type": "object", "enabled": False}
@@ -1481,6 +1721,8 @@ async def index_logs_bulk(logs: list[dict]) -> int:
 async def search_logs(
     q: str | None = None,
     cloud_provider: str | None = None,
+    source_id: int | None = None,
+    source_ids: list[int] | None = None,
     source_ip: str | None = None,
     start_date: str | None = None,
     end_date: str | None = None,
@@ -1493,10 +1735,16 @@ async def search_logs(
     filters = []
 
     if q:
-        must.append({"multi_match": {"query": q, "fields": ["action", "source_ip", "status", "cloud_provider"]}})
+        must.append({"multi_match": {"query": q, "fields": ["action", "source_ip", "status", "cloud_provider", "source_name"]}})
 
     if cloud_provider:
         filters.append({"term": {"cloud_provider": cloud_provider}})
+
+    if source_id:
+        filters.append({"term": {"source_id": source_id}})
+
+    if source_ids:
+        filters.append({"terms": {"source_id": source_ids}})
 
     if source_ip:
         filters.append({"term": {"source_ip": source_ip}})
@@ -1536,7 +1784,7 @@ async def get_log_stats() -> dict:
     """Get aggregate statistics across all log indices."""
     es = get_es_client()
     try:
-        # Count by provider
+        # Count by provider + by source
         response = await es.search(
             index="logs-*",
             body={
@@ -1544,6 +1792,9 @@ async def get_log_stats() -> dict:
                 "aggs": {
                     "by_provider": {
                         "terms": {"field": "cloud_provider"}
+                    },
+                    "by_source": {
+                        "terms": {"field": "source_id", "size": 100}
                     }
                 }
             }
@@ -1553,6 +1804,9 @@ async def get_log_stats() -> dict:
         total = hits.get("total", {}).get("value", 0)
         buckets = response.get("aggregations", {}).get("by_provider", {}).get("buckets", [])
         logs_by_provider = {b["key"]: b["doc_count"] for b in buckets}
+
+        source_buckets = response.get("aggregations", {}).get("by_source", {}).get("buckets", [])
+        logs_by_source = {str(b["key"]): b["doc_count"] for b in source_buckets}
 
         # Get recent logs
         recent = await es.search(
@@ -1568,11 +1822,63 @@ async def get_log_stats() -> dict:
         return {
             "total_logs": total,
             "logs_by_provider": logs_by_provider,
+            "logs_by_source": logs_by_source,
             "recent_logs": recent_logs,
         }
     except Exception as e:
         logger.error("Stats query failed: %s", e)
-        return {"total_logs": 0, "logs_by_provider": {}, "recent_logs": []}
+        return {"total_logs": 0, "logs_by_provider": {}, "logs_by_source": {}, "recent_logs": []}
+
+
+async def get_source_stats(source_id: int) -> dict:
+    """Get statistics for a specific source."""
+    es = get_es_client()
+    try:
+        response = await es.search(
+            index="logs-*",
+            body={
+                "size": 0,
+                "query": {"term": {"source_id": source_id}},
+                "aggs": {
+                    "error_count": {
+                        "filter": {
+                            "bool": {
+                                "must_not": [
+                                    {"terms": {"status": ["200", "201", "204", "Success", "info", "debug"]}}
+                                ]
+                            }
+                        }
+                    },
+                    "recent_errors": {
+                        "filter": {
+                            "bool": {
+                                "must": [
+                                    {"range": {"timestamp": {"gte": "now-15m"}}}
+                                ],
+                                "must_not": [
+                                    {"terms": {"status": ["200", "201", "204", "Success", "info", "debug"]}}
+                                ]
+                            }
+                        }
+                    }
+                }
+            }
+        )
+
+        hits = response.get("hits", {})
+        total = hits.get("total", {}).get("value", 0)
+        error_count = response.get("aggregations", {}).get("error_count", {}).get("doc_count", 0)
+        last_15_min_errors = response.get("aggregations", {}).get("recent_errors", {}).get("doc_count", 0)
+
+        return {
+            "source_id": source_id,
+            "total_logs": total,
+            "error_count": error_count,
+            "last_15_min_errors": last_15_min_errors,
+        }
+    except Exception as e:
+        logger.error("Source stats query failed: %s", e)
+        return {"source_id": source_id, "total_logs": 0, "error_count": 0, "last_15_min_errors": 0}
 
 
 
@@ -1596,7 +1902,7 @@ NGINX_LOG_PATTERN = re.compile(
 )
 
 
-def normalize_aws_log(raw_line: str) -> Optional[dict]:
+def normalize_aws_log(raw_line: str, source_id: int = 0, source_name: str = "") -> Optional[dict]:
     """Parse a raw Nginx/syslog line into the unified schema."""
     match = NGINX_LOG_PATTERN.match(raw_line.strip())
     if not match:
@@ -1605,6 +1911,8 @@ def normalize_aws_log(raw_line: str) -> Optional[dict]:
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "source_ip": "unknown",
             "cloud_provider": "aws",
+            "source_id": source_id,
+            "source_name": source_name,
             "action": raw_line.strip()[:200],
             "status": "unknown",
             "raw_log": {"raw": raw_line},
@@ -1622,27 +1930,31 @@ def normalize_aws_log(raw_line: str) -> Optional[dict]:
         "timestamp": ts.isoformat(),
         "source_ip": match.group("ip"),
         "cloud_provider": "aws",
+        "source_id": source_id,
+        "source_name": source_name,
         "action": f"{match.group('method')} {match.group('path')}",
         "status": match.group("status"),
         "raw_log": {"raw": raw_line},
     }
 
 
-def normalize_azure_log(record: dict) -> dict:
+def normalize_azure_log(record: dict, source_id: int = 0, source_name: str = "") -> dict:
     """Normalize an Azure Diagnostic Settings JSON record."""
     return {
         "timestamp": record.get("time", datetime.now(timezone.utc).isoformat()),
         "source_ip": record.get("callerIpAddress", record.get("callerIPAddress", "unknown")),
         "cloud_provider": "azure",
+        "source_id": source_id,
+        "source_name": source_name,
         "action": record.get("operationName", record.get("action", "unknown")),
         "status": record.get("resultType", record.get("status", "unknown")),
         "raw_log": record,
     }
 
 
-def normalize_gcp_log(message: dict) -> dict:
+def normalize_gcp_log(message: dict, source_id: int = 0, source_name: str = "") -> dict:
     """Normalize a GCP Cloud Logging Pub/Sub message.
-    
+
     GCP sends base64-encoded JSON in message.data.
     """
     try:
@@ -1664,15 +1976,17 @@ def normalize_gcp_log(message: dict) -> dict:
         "timestamp": payload.get("timestamp", datetime.now(timezone.utc).isoformat()),
         "source_ip": request_meta.get("callerIp", "unknown"),
         "cloud_provider": "gcp",
+        "source_id": source_id,
+        "source_name": source_name,
         "action": proto.get("methodName", "unknown"),
         "status": proto.get("status", {}).get("message", "unknown") if isinstance(proto.get("status"), dict) else str(proto.get("status", "unknown")),
         "raw_log": payload,
     }
 
 
-def normalize_log(raw_data, cloud_provider: str) -> list[dict]:
+def normalize_log(raw_data, cloud_provider: str, source_id: int = 0, source_name: str = "") -> list[dict]:
     """Main entry point: normalize logs based on cloud provider.
-    
+
     Returns a list of normalized log dicts ready for Elasticsearch.
     """
     normalized = []
@@ -1681,11 +1995,11 @@ def normalize_log(raw_data, cloud_provider: str) -> list[dict]:
         # raw_data is a list of log lines
         if isinstance(raw_data, list):
             for line in raw_data:
-                result = normalize_aws_log(str(line))
+                result = normalize_aws_log(str(line), source_id, source_name)
                 if result:
                     normalized.append(result)
         else:
-            result = normalize_aws_log(str(raw_data))
+            result = normalize_aws_log(str(raw_data), source_id, source_name)
             if result:
                 normalized.append(result)
 
@@ -1693,14 +2007,36 @@ def normalize_log(raw_data, cloud_provider: str) -> list[dict]:
         # raw_data is a list of record dicts
         if isinstance(raw_data, list):
             for record in raw_data:
-                normalized.append(normalize_azure_log(record))
+                normalized.append(normalize_azure_log(record, source_id, source_name))
         else:
-            normalized.append(normalize_azure_log(raw_data))
+            normalized.append(normalize_azure_log(raw_data, source_id, source_name))
 
     elif cloud_provider == "gcp":
         # raw_data is a single message dict
-        normalized.append(normalize_gcp_log(raw_data))
+        normalized.append(normalize_gcp_log(raw_data, source_id, source_name))
 
+    return normalized
+
+
+def normalize_generic_logs(
+    logs: list[dict],
+    source_id: int = 0,
+    source_name: str = "",
+    cloud_provider: str = "generic",
+) -> list[dict]:
+    """Normalize generic JSON logs from Python/Node.js/Docker/cURL sources."""
+    normalized = []
+    for log_entry in logs:
+        normalized.append({
+            "timestamp": log_entry.get("timestamp", datetime.now(timezone.utc).isoformat()),
+            "source_ip": log_entry.get("source_ip", log_entry.get("host", "unknown")),
+            "cloud_provider": cloud_provider,
+            "source_id": source_id,
+            "source_name": source_name,
+            "action": log_entry.get("action", log_entry.get("message", log_entry.get("msg", "unknown"))),
+            "status": str(log_entry.get("status", log_entry.get("level", "info"))),
+            "raw_log": log_entry,
+        })
     return normalized
 
 
@@ -2398,6 +2734,14 @@ export interface LogSource {
     is_active: boolean;
     owner_id: string;
     created_at: string;
+    api_key: string;
+    status: string; // "waiting" | "connected" | "inactive"
+}
+
+export interface LogSourceStatus {
+    id: number;
+    status: string;
+    name: string;
 }
 
 // ==========================================
@@ -2414,7 +2758,15 @@ export interface LogSearchResult {
 export interface LogStats {
     total_logs: number;
     logs_by_provider: Record<string, number>;
+    logs_by_source: Record<string, number>;
     recent_logs: Record<string, unknown>[];
+}
+
+export interface SourceStats {
+    source_id: number;
+    total_logs: number;
+    error_count: number;
+    last_15_min_errors: number;
 }
 
 // ==========================================
@@ -2425,6 +2777,8 @@ export async function searchLogs(
     q?: string,
     cloud_provider?: string,
     source_ip?: string,
+    source_id?: number,
+    source_ids?: number[],
     page: number = 1,
     size: number = 50,
 ): Promise<LogSearchResult> {
@@ -2433,10 +2787,14 @@ export async function searchLogs(
         if (q) params.set("q", q);
         if (cloud_provider) params.set("cloud_provider", cloud_provider);
         if (source_ip) params.set("source_ip", source_ip);
+        if (source_id) params.set("source_id", source_id.toString());
+        if (source_ids && source_ids.length > 0) params.set("source_ids", source_ids.join(","));
         params.set("page", page.toString());
         params.set("size", size.toString());
 
-        return await pythonApi<LogSearchResult>(`/logs/search?${params.toString()}`);
+        return await pythonApi<LogSearchResult>(`/logs/search?${params.toString()}`, {
+            cache: "no-store",
+        });
     } catch (e) {
         console.error("Failed to search logs:", e);
         return { total: 0, page: 1, size: 50, logs: [] };
@@ -2445,10 +2803,19 @@ export async function searchLogs(
 
 export async function getLogStats(): Promise<LogStats> {
     try {
-        return await pythonApi<LogStats>("/logs/stats");
+        return await pythonApi<LogStats>("/logs/stats", { cache: "no-store" });
     } catch (e) {
         console.error("Failed to get log stats:", e);
-        return { total_logs: 0, logs_by_provider: {}, recent_logs: [] };
+        return { total_logs: 0, logs_by_provider: {}, logs_by_source: {}, recent_logs: [] };
+    }
+}
+
+export async function getSourceStats(sourceId: number): Promise<SourceStats> {
+    try {
+        return await pythonApi<SourceStats>(`/logs/stats/${sourceId}`, { cache: "no-store" });
+    } catch (e) {
+        console.error("Failed to get source stats:", e);
+        return { source_id: sourceId, total_logs: 0, error_count: 0, last_15_min_errors: 0 };
     }
 }
 
@@ -2458,24 +2825,35 @@ export async function getLogStats(): Promise<LogStats> {
 
 export async function getSources(): Promise<LogSource[]> {
     try {
-        return await pythonApi<LogSource[]>("/sources/");
+        return await pythonApi<LogSource[]>("/sources/", { cache: "no-store" });
     } catch (e) {
         console.error("Failed to fetch sources:", e);
         return [];
     }
 }
 
-export async function createSource(formData: FormData) {
-    const name = formData.get("name") as string;
-    const cloud_provider = formData.get("cloud_provider") as string;
-    const description = formData.get("description") as string;
+export async function getSourceStatus(sourceId: number): Promise<LogSourceStatus> {
+    try {
+        return await pythonApi<LogSourceStatus>(`/sources/${sourceId}/status`, { cache: "no-store" });
+    } catch (e) {
+        console.error("Failed to get source status:", e);
+        return { id: sourceId, status: "unknown", name: "" };
+    }
+}
 
-    await pythonApi("/sources/", {
+export async function createSource(data: {
+    name: string;
+    cloud_provider: string;
+    description?: string;
+}): Promise<LogSource> {
+    const result = await pythonApi<LogSource>("/sources/", {
         method: "POST",
-        body: JSON.stringify({ name, cloud_provider, description }),
+        body: JSON.stringify(data),
     });
 
     revalidatePath("/dashboard/sources");
+    revalidatePath("/dashboard");
+    return result;
 }
 
 export async function deleteSource(sourceId: number) {
@@ -2484,6 +2862,7 @@ export async function deleteSource(sourceId: number) {
     });
 
     revalidatePath("/dashboard/sources");
+    revalidatePath("/dashboard");
 }
 
 
@@ -3089,10 +3468,12 @@ import { useTheme } from "@/components/ThemeProvider";
 import StatsCard from "@/components/StatsCard";
 import DotGrid from '@/components/ui/DotGrid';
 import { BentoSection, ParticleCard } from '@/components/ui/MagicBento';
+import SafeDate from "@/components/ui/SafeDate";
 
 interface LogStats {
     total_logs: number;
     logs_by_provider: Record<string, number>;
+    logs_by_source: Record<string, number>;
     recent_logs: Record<string, unknown>[];
 }
 
@@ -3101,6 +3482,8 @@ interface LogSource {
     name: string;
     cloud_provider: string;
     is_active: boolean;
+    api_key: string;
+    status: string;
 }
 
 interface DashboardClientProps {
@@ -3201,7 +3584,7 @@ export default function DashboardClient({ stats, sources }: DashboardClientProps
                                                 </span>
                                                 <span className="text-sm text-[var(--text-main)]">{src.name}</span>
                                             </div>
-                                            <div className={`w-2 h-2 rounded-full ${src.is_active ? "bg-green-400" : "bg-red-400"}`} />
+                                            <div className={`w-2 h-2 rounded-full ${src.status === "connected" ? "bg-green-400" : src.status === "waiting" ? "bg-yellow-400 animate-pulse" : "bg-gray-400"}`} />
                                         </div>
                                     ))}
                                 </div>
@@ -3241,14 +3624,17 @@ export default function DashboardClient({ stats, sources }: DashboardClientProps
                                             <div className="col-span-4 text-sm text-[var(--text-main)] truncate">{log.action as string}</div>
                                             <div className="col-span-2">
                                                 <span className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${(log.status as string)?.startsWith("2") || (log.status as string) === "Success"
-                                                        ? "bg-green-500/10 text-green-400 border-green-500/20"
-                                                        : "bg-red-500/10 text-red-400 border-red-500/20"
+                                                    ? "bg-green-500/10 text-green-400 border-green-500/20"
+                                                    : "bg-red-500/10 text-red-400 border-red-500/20"
                                                     }`}>
                                                     {log.status as string}
                                                 </span>
                                             </div>
                                             <div className="col-span-2 text-right text-xs text-[var(--text-subtle)]">
-                                                {log.timestamp ? new Date(log.timestamp as string).toLocaleTimeString() : "—"}
+                                                <SafeDate
+                                                    date={log.timestamp as string}
+                                                    mode="toLocaleTimeString"
+                                                />
                                             </div>
                                         </div>
                                     ))
@@ -3306,13 +3692,13 @@ export default function DashboardLayoutClient({
     };
 
     return (
-        <div className="min-h-screen bg-[var(--background)] transition-colors duration-300">
+        <div className="h-screen flex overflow-hidden bg-[var(--background)] transition-colors duration-300">
             <Sidebar
                 activePage={getActivePage()}
                 isCollapsed={isCollapsed}
                 onToggleCollapse={() => setIsCollapsed(!isCollapsed)}
             />
-            <div className={`transition-all duration-300 ${isCollapsed ? "ml-16" : "ml-56"}`}>
+            <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${isCollapsed ? "ml-16" : "ml-56"}`}>
                 <TopNav
                     userName={userName}
                     userEmail={userEmail}
@@ -3320,7 +3706,9 @@ export default function DashboardLayoutClient({
                     organizationName={organizationId || "Personal Workspace"}
                     onSignOut={handleSignOut}
                 />
-                {children}
+                <div className="flex-1 overflow-auto flex flex-col min-h-0">
+                    {children}
+                </div>
             </div>
         </div>
     );
@@ -3387,43 +3775,103 @@ FILE: frontend/src/app/dashboard/logs/LogExplorerClient.tsx
 ================================================
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useRef, useTransition } from "react";
 import { useTheme } from "@/components/ThemeProvider";
+import { useSearchParams } from "next/navigation";
 import DotGrid from "@/components/ui/DotGrid";
-import { BentoSection, ParticleCard } from "@/components/ui/MagicBento";
-import { searchLogs, type LogSearchResult } from "../../actions";
+import { BentoSection } from "@/components/ui/MagicBento";
+import {
+    searchLogs,
+    getSourceStats,
+    type LogSearchResult,
+    type LogSource,
+    type SourceStats,
+} from "../../actions";
+import SafeDate from "@/components/ui/SafeDate";
 
 interface LogExplorerClientProps {
     initialData: LogSearchResult;
+    sources: LogSource[];
 }
 
 const providerColors: Record<string, string> = {
-    aws: "bg-orange-500/10 text-orange-400 border-orange-500/20",
-    azure: "bg-blue-500/10 text-blue-400 border-blue-500/20",
-    gcp: "bg-green-500/10 text-green-400 border-green-500/20",
+    aws: "text-orange-400",
+    azure: "text-blue-400",
+    gcp: "text-green-400",
+    python: "text-yellow-400",
+    nodejs: "text-emerald-400",
+    docker: "text-cyan-400",
+    curl: "text-purple-400",
 };
 
-const providerLabels: Record<string, string> = {
-    aws: "AWS",
-    azure: "Azure",
-    gcp: "GCP",
+const statusBadge = (status: string) => {
+    const s = String(status);
+    if (s.startsWith("2") || s === "Success" || s === "info" || s === "debug") {
+        return "text-green-400";
+    }
+    if (s.startsWith("4") || s === "warning" || s === "warn") {
+        return "text-yellow-400";
+    }
+    if (s.startsWith("5") || s === "error" || s === "critical" || s === "fatal") {
+        return "text-red-400";
+    }
+    return "text-[var(--text-muted)]";
 };
 
-export default function LogExplorerClient({ initialData }: LogExplorerClientProps) {
+export default function LogExplorerClient({ initialData, sources }: LogExplorerClientProps) {
     const { theme } = useTheme();
+    const searchParams = useSearchParams();
     const [isPending, startTransition] = useTransition();
     const [data, setData] = useState(initialData);
     const [query, setQuery] = useState("");
-    const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
-    const [sourceIpFilter, setSourceIpFilter] = useState("");
+    const [selectedSourceIds, setSelectedSourceIds] = useState<Set<number>>(new Set());
     const [currentPage, setCurrentPage] = useState(1);
 
-    const handleSearch = (page: number = 1) => {
+    // Live tailing
+    const [isLive, setIsLive] = useState(false);
+    const logContainerRef = useRef<HTMLDivElement>(null);
+    const liveIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Expanded rows
+    const [expandedRows, setExpandedRows] = useState<Set<number>>(new Set());
+
+    // Source stats
+    const [activeSourceStats, setActiveSourceStats] = useState<SourceStats | null>(null);
+
+    // Initialize from URL params
+    useEffect(() => {
+        const sourceIdParam = searchParams.get("source_id");
+        if (sourceIdParam) {
+            const id = parseInt(sourceIdParam);
+            if (!isNaN(id)) {
+                setSelectedSourceIds(new Set([id]));
+            }
+        }
+    }, [searchParams]);
+
+    // Fetch source stats when a single source is selected
+    useEffect(() => {
+        if (selectedSourceIds.size === 1) {
+            const sourceId = Array.from(selectedSourceIds)[0];
+            startTransition(async () => {
+                const stats = await getSourceStats(sourceId);
+                setActiveSourceStats(stats);
+            });
+        } else {
+            setActiveSourceStats(null);
+        }
+    }, [selectedSourceIds]);
+
+    // Search function
+    const doSearch = (page: number = 1) => {
         startTransition(async () => {
+            const ids = Array.from(selectedSourceIds);
             const result = await searchLogs(
                 query || undefined,
-                selectedProvider || undefined,
-                sourceIpFilter || undefined,
+                undefined,
+                undefined,
+                ids.length === 1 ? ids[0] : undefined,
+                ids.length > 1 ? ids : undefined,
                 page,
                 50,
             );
@@ -3432,11 +3880,57 @@ export default function LogExplorerClient({ initialData }: LogExplorerClientProp
         });
     };
 
+    // Auto-search when source selection changes
+    useEffect(() => {
+        doSearch(1);
+    }, [selectedSourceIds]);
+
+    // Live tailing
+    useEffect(() => {
+        if (isLive) {
+            liveIntervalRef.current = setInterval(() => {
+                doSearch(1);
+            }, 4000);
+        } else {
+            if (liveIntervalRef.current) clearInterval(liveIntervalRef.current);
+        }
+        return () => {
+            if (liveIntervalRef.current) clearInterval(liveIntervalRef.current);
+        };
+    }, [isLive, selectedSourceIds, query]);
+
+    // Auto-scroll when live and new data arrives
+    useEffect(() => {
+        if (isLive && logContainerRef.current) {
+            logContainerRef.current.scrollTop = 0;
+        }
+    }, [data, isLive]);
+
+    const toggleSource = (id: number) => {
+        const next = new Set(selectedSourceIds);
+        if (next.has(id)) {
+            next.delete(id);
+        } else {
+            next.add(id);
+        }
+        setSelectedSourceIds(next);
+    };
+
+    const toggleRow = (idx: number) => {
+        const next = new Set(expandedRows);
+        if (next.has(idx)) {
+            next.delete(idx);
+        } else {
+            next.add(idx);
+        }
+        setExpandedRows(next);
+    };
+
     const totalPages = Math.ceil(data.total / data.size);
 
     return (
-        <main className="relative min-h-screen">
-            <div className="absolute inset-0 z-0">
+        <main className="flex-1 flex flex-col h-full overflow-hidden">
+            <div className="absolute inset-0 z-0 pointer-events-none">
                 <DotGrid
                     dotSize={4}
                     gap={15}
@@ -3450,202 +3944,240 @@ export default function LogExplorerClient({ initialData }: LogExplorerClientProp
                 />
             </div>
 
-            <BentoSection className="relative z-10 p-6 lg:p-8" glowColor="255, 255, 255">
+            <BentoSection className="relative z-10 p-6 lg:p-8 flex-1 flex flex-col min-h-0" glowColor="255, 255, 255">
                 {/* Header */}
-                <div className="mb-6">
-                    <h1 className="text-2xl font-bold text-[var(--text-main)] font-[family-name:var(--font-space-grotesk)]">
-                        Log Explorer
-                    </h1>
-                    <p className="text-[var(--text-subtle)] text-sm mt-1">
-                        Search and filter security logs across AWS, Azure, and GCP.
-                    </p>
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-[var(--text-main)] font-[family-name:var(--font-space-grotesk)]">
+                            Log Explorer
+                        </h1>
+                        <p className="text-[var(--text-subtle)] text-sm mt-1">
+                            Real-time log streaming across all connected sources.
+                        </p>
+                    </div>
+
+                    {/* Live Toggle */}
+                    <button
+                        onClick={() => setIsLive(!isLive)}
+                        className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all border ${isLive
+                            ? "bg-green-500/10 text-green-400 border-green-500/30"
+                            : "bg-[var(--surface)] text-[var(--text-subtle)] border-[var(--border)] hover:border-[var(--border-light)]"
+                            }`}
+                    >
+                        <span className={`w-2 h-2 rounded-full ${isLive ? "bg-green-500 animate-pulse" : "bg-gray-500"}`} />
+                        {isLive ? "Live" : "Paused"}
+                    </button>
                 </div>
 
-                {/* Search + Filters */}
-                <ParticleCard
-                    enableTilt={false}
-                    enableMagnetism={false}
-                    glowColor="255, 255, 255"
-                    className="card--border-glow bg-[var(--card-bg)] backdrop-blur-[20px] rounded-xl border border-[var(--divider)] mb-6"
-                >
-                    <div className="p-5 relative z-10">
-                        <div className="flex flex-col lg:flex-row gap-4">
-                            {/* Search Input */}
-                            <div className="flex-1 relative">
-                                <svg
-                                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--text-subtle)]"
-                                    width="16"
-                                    height="16"
-                                    viewBox="0 0 24 24"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    strokeWidth="2"
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                >
-                                    <circle cx="11" cy="11" r="8" />
-                                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                                </svg>
-                                <input
-                                    type="text"
-                                    placeholder="Search logs by IP, action, status..."
-                                    value={query}
-                                    onChange={(e) => setQuery(e.target.value)}
-                                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-                                    className="w-full pl-10 pr-4 py-2.5 border border-[var(--input-border)] rounded-lg bg-[var(--input-bg)] text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border-light)]"
-                                />
-                            </div>
+                {/* Source Stats Strip */}
+                {activeSourceStats && (
+                    <div className="mb-4 flex items-center gap-6 px-4 py-3 rounded-xl bg-[var(--card-bg)] border border-[var(--divider)] backdrop-blur-[20px]">
+                        <span className="text-xs text-[var(--text-subtle)]">
+                            <strong className="text-[var(--text-main)]">{sources.find(s => s.id === activeSourceStats.source_id)?.name}</strong> stats:
+                        </span>
+                        <span className="text-xs text-[var(--text-muted)]">
+                            Total: <strong className="text-[var(--text-main)]">{activeSourceStats.total_logs.toLocaleString()}</strong>
+                        </span>
+                        <span className="text-xs text-[var(--text-muted)]">
+                            Errors: <strong className="text-red-400">{activeSourceStats.error_count.toLocaleString()}</strong>
+                        </span>
+                        <span className="text-xs text-[var(--text-muted)]">
+                            15m Errors: <strong className="text-red-400">{activeSourceStats.last_15_min_errors}</strong>
+                        </span>
+                    </div>
+                )}
 
-                            {/* IP Filter */}
-                            <input
-                                type="text"
-                                placeholder="Filter by IP..."
-                                value={sourceIpFilter}
-                                onChange={(e) => setSourceIpFilter(e.target.value)}
-                                className="w-40 px-4 py-2.5 border border-[var(--input-border)] rounded-lg bg-[var(--input-bg)] text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border-light)]"
-                            />
-
-                            {/* Search Button */}
-                            <button
-                                onClick={() => handleSearch()}
-                                disabled={isPending}
-                                className="px-6 py-2.5 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] rounded-lg font-medium text-sm hover:opacity-90 transition-colors disabled:opacity-50"
-                            >
-                                {isPending ? "Searching..." : "Search"}
-                            </button>
+                {/* Split Pane Layout */}
+                <div className="flex-1 flex gap-4 min-h-0">
+                    {/* ========== LEFT SIDEBAR: Source List ========== */}
+                    <div className="w-56 flex-shrink-0 bg-[var(--card-bg)] backdrop-blur-[20px] rounded-xl border border-[var(--divider)] overflow-hidden flex flex-col">
+                        <div className="px-4 py-3 border-b border-[var(--divider)]">
+                            <h3 className="text-xs font-semibold text-[var(--text-muted)] uppercase tracking-wider">Sources</h3>
                         </div>
+                        <div className="flex-1 overflow-y-auto py-1">
+                            {/* All Sources option */}
+                            <button
+                                onClick={() => setSelectedSourceIds(new Set())}
+                                className={`w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${selectedSourceIds.size === 0
+                                    ? "bg-[var(--hover-bg)] text-[var(--text-main)]"
+                                    : "text-[var(--text-subtle)] hover:bg-[var(--hover-bg)]"
+                                    }`}
+                            >
+                                <span className={`w-2 h-2 rounded-full ${selectedSourceIds.size === 0 ? "bg-blue-400" : "bg-gray-500"}`} />
+                                <span className="font-medium">All Sources</span>
+                            </button>
 
-                        {/* Provider Filter Chips */}
-                        <div className="flex items-center gap-2 mt-4">
-                            <span className="text-xs text-[var(--text-subtle)] font-medium">Cloud:</span>
-                            {["aws", "azure", "gcp"].map((provider) => (
+                            {sources.map((src) => (
                                 <button
-                                    key={provider}
-                                    onClick={() => {
-                                        setSelectedProvider(selectedProvider === provider ? null : provider);
-                                    }}
-                                    className={`px-3 py-1 rounded-full text-xs font-semibold border transition-colors uppercase ${selectedProvider === provider
-                                            ? providerColors[provider]
-                                            : "bg-[var(--surface)] text-[var(--text-subtle)] border-[var(--border)] hover:bg-[var(--hover-bg)]"
+                                    key={src.id}
+                                    onClick={() => toggleSource(src.id)}
+                                    className={`w-full text-left flex items-center gap-2.5 px-4 py-2.5 text-sm transition-colors ${selectedSourceIds.has(src.id)
+                                        ? "bg-[var(--hover-bg)] text-[var(--text-main)]"
+                                        : "text-[var(--text-subtle)] hover:bg-[var(--hover-bg)]"
                                         }`}
                                 >
-                                    {providerLabels[provider]}
+                                    <span
+                                        className={`w-2 h-2 rounded-full flex-shrink-0 ${src.status === "connected"
+                                            ? "bg-green-400"
+                                            : src.status === "waiting"
+                                                ? "bg-yellow-400 animate-pulse"
+                                                : "bg-gray-500"
+                                            }`}
+                                    />
+                                    <div className="min-w-0">
+                                        <div className="font-medium truncate">{src.name}</div>
+                                        <div className={`text-[10px] uppercase font-bold ${providerColors[src.cloud_provider] || "text-gray-400"}`}>
+                                            {src.cloud_provider}
+                                        </div>
+                                    </div>
                                 </button>
                             ))}
-                            {selectedProvider && (
-                                <button
-                                    onClick={() => setSelectedProvider(null)}
-                                    className="text-xs text-[var(--text-subtle)] hover:text-[var(--text-main)] transition-colors underline"
-                                >
-                                    Clear
-                                </button>
-                            )}
                         </div>
                     </div>
-                </ParticleCard>
 
-                {/* Results */}
-                <ParticleCard
-                    enableTilt={false}
-                    enableMagnetism={false}
-                    glowColor="255, 255, 255"
-                    className="card--border-glow bg-[var(--card-bg)] backdrop-blur-[20px] rounded-xl border border-[var(--divider)]"
-                >
-                    <div className="relative z-10">
-                        <div className="p-5 border-b border-[var(--divider)] flex items-center justify-between">
-                            <h2 className="font-semibold text-[var(--text-main)] text-sm">
-                                Results
-                                <span className="ml-2 text-[var(--text-subtle)] font-normal">
-                                    ({data.total.toLocaleString()} logs)
-                                </span>
-                            </h2>
+                    {/* ========== MAIN PANE: Terminal Log View ========== */}
+                    <div className="flex-1 flex flex-col bg-[var(--card-bg)] backdrop-blur-[20px] rounded-xl border border-[var(--divider)] overflow-hidden">
+                        {/* Search Bar */}
+                        <div className="px-4 py-3 border-b border-[var(--divider)] flex items-center gap-3">
+                            <svg
+                                className="text-[var(--text-subtle)] flex-shrink-0"
+                                width="14"
+                                height="14"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                            <input
+                                type="text"
+                                placeholder="Search logs..."
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && doSearch()}
+                                className="flex-1 bg-transparent text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none"
+                            />
+                            <span className="text-[11px] text-[var(--text-subtle)]">
+                                {data.total.toLocaleString()} logs
+                            </span>
+                            {isPending && (
+                                <div className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+                            )}
                         </div>
 
-                        {/* Table Header */}
-                        <div className="grid grid-cols-12 gap-4 px-5 py-3 text-[11px] font-medium text-[var(--text-subtle)] uppercase tracking-wider border-b border-[var(--divider)]">
-                            <div className="col-span-2">Provider</div>
-                            <div className="col-span-2">Source IP</div>
-                            <div className="col-span-4">Action</div>
-                            <div className="col-span-2">Status</div>
-                            <div className="col-span-2 text-right">Timestamp</div>
-                        </div>
-
-                        {/* Rows */}
-                        <div className="divide-y divide-[var(--divider)]">
+                        {/* Terminal Log Rows */}
+                        <div ref={logContainerRef} className="flex-1 overflow-y-auto font-mono text-[13px] leading-relaxed">
                             {data.logs.length === 0 ? (
-                                <div className="px-5 py-12 text-center text-[var(--text-subtle)] text-sm">
+                                <div className="flex items-center justify-center h-full text-[var(--text-subtle)] text-sm">
                                     {data.total === 0
-                                        ? "No logs found. Ingest logs via the API to see them here."
-                                        : "No logs match your search criteria."}
+                                        ? "No logs found. Connect a source and start sending logs."
+                                        : "No logs match your filters."}
                                 </div>
                             ) : (
                                 data.logs.map((log, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="grid grid-cols-12 gap-4 px-5 py-3 hover:bg-[var(--hover-bg)] transition-colors items-center"
-                                    >
-                                        <div className="col-span-2">
-                                            <span
-                                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${providerColors[log.cloud_provider as string] ||
-                                                    "bg-gray-500/10 text-gray-400 border-gray-500/20"
-                                                    }`}
+                                    <div key={idx}>
+                                        {/* Log Line */}
+                                        <div
+                                            onClick={() => toggleRow(idx)}
+                                            className={`flex items-start gap-3 px-4 py-1.5 cursor-pointer transition-colors hover:bg-[var(--hover-bg)] ${expandedRows.has(idx) ? "bg-[var(--hover-bg)]" : ""
+                                                }`}
+                                        >
+                                            {/* Expand Arrow */}
+                                            <svg
+                                                width="10"
+                                                height="10"
+                                                viewBox="0 0 24 24"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                strokeWidth="2"
+                                                className={`flex-shrink-0 mt-1 text-[var(--text-subtle)] transition-transform ${expandedRows.has(idx) ? "rotate-90" : ""}`}
                                             >
-                                                {providerLabels[log.cloud_provider as string] || (log.cloud_provider as string)}
+                                                <path d="M9 18l6-6-6-6" />
+                                            </svg>
+
+                                            {/* Timestamp */}
+                                            <SafeDate
+                                                date={log.timestamp as string}
+                                                className="text-[var(--text-subtle)] flex-shrink-0 w-[145px]"
+                                                options={{
+                                                    month: "short",
+                                                    day: "2-digit",
+                                                    hour: "2-digit",
+                                                    minute: "2-digit",
+                                                    second: "2-digit",
+                                                    hour12: false,
+                                                }}
+                                            />
+
+                                            {/* Status badge */}
+                                            <span className={`flex-shrink-0 w-[55px] font-bold text-[12px] ${statusBadge(log.status as string)}`}>
+                                                {(log.status as string) || "—"}
+                                            </span>
+
+                                            {/* Source Name */}
+                                            {(log.source_name as string) && (
+                                                <span className={`flex-shrink-0 text-[11px] px-1.5 py-0 rounded ${providerColors[log.cloud_provider as string] || "text-gray-400"}`}>
+                                                    [{log.source_name as string}]
+                                                </span>
+                                            )}
+
+                                            {/* Action */}
+                                            <span className="text-[var(--text-main)] truncate">
+                                                {log.action as string}
                                             </span>
                                         </div>
-                                        <div className="col-span-2 text-sm text-[var(--text-muted)] font-mono truncate">
-                                            {log.source_ip as string}
-                                        </div>
-                                        <div className="col-span-4 text-sm text-[var(--text-main)] truncate">
-                                            {log.action as string}
-                                        </div>
-                                        <div className="col-span-2">
-                                            <span
-                                                className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${(log.status as string)?.startsWith("2") ||
-                                                        (log.status as string) === "Success"
-                                                        ? "bg-green-500/10 text-green-400 border-green-500/20"
-                                                        : "bg-red-500/10 text-red-400 border-red-500/20"
-                                                    }`}
-                                            >
-                                                {log.status as string}
-                                            </span>
-                                        </div>
-                                        <div className="col-span-2 text-right text-xs text-[var(--text-subtle)]">
-                                            {log.timestamp
-                                                ? new Date(log.timestamp as string).toLocaleString()
-                                                : "—"}
-                                        </div>
+
+                                        {/* Expanded Raw JSON */}
+                                        {expandedRows.has(idx) && (
+                                            <div className="mx-4 mb-2 ml-11 p-3 rounded-lg bg-[var(--surface)] border border-[var(--border)] overflow-x-auto">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <span className="text-[10px] font-semibold text-[var(--text-subtle)] uppercase tracking-wider">Raw Log</span>
+                                                    <div className="flex gap-3 text-[10px] text-[var(--text-subtle)]">
+                                                        <span>IP: <strong className="text-[var(--text-muted)]">{log.source_ip as string}</strong></span>
+                                                        <span>Provider: <strong className={providerColors[log.cloud_provider as string] || "text-gray-400"}>{(log.cloud_provider as string)?.toUpperCase()}</strong></span>
+                                                        {!!log.source_id && <span>Source ID: <strong className="text-[var(--text-muted)]">#{log.source_id as number}</strong></span>}
+                                                    </div>
+                                                </div>
+                                                <pre className="text-[12px] text-[var(--text-muted)] whitespace-pre-wrap break-words">
+                                                    {JSON.stringify(log.raw_log, null, 2)}
+                                                </pre>
+                                            </div>
+                                        )}
                                     </div>
                                 ))
                             )}
                         </div>
 
-                        {/* Pagination */}
-                        {data.total > 0 && (
-                            <div className="px-5 py-3 border-t border-[var(--divider)] flex items-center justify-between">
-                                <p className="text-xs text-[var(--text-subtle)]">
+                        {/* Pagination Footer */}
+                        {data.total > 0 && !isLive && (
+                            <div className="px-4 py-2 border-t border-[var(--divider)] flex items-center justify-between">
+                                <p className="text-[11px] text-[var(--text-subtle)]">
                                     Page {currentPage} of {totalPages} ({data.total.toLocaleString()} total)
                                 </p>
                                 <div className="flex items-center gap-1">
                                     <button
-                                        onClick={() => handleSearch(currentPage - 1)}
+                                        onClick={() => doSearch(currentPage - 1)}
                                         disabled={currentPage === 1 || isPending}
                                         className="p-1.5 border border-[var(--border)] rounded-md hover:bg-[var(--hover-bg)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                     >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
                                     </button>
                                     <button
-                                        onClick={() => handleSearch(currentPage + 1)}
+                                        onClick={() => doSearch(currentPage + 1)}
                                         disabled={currentPage >= totalPages || isPending}
                                         className="p-1.5 border border-[var(--border)] rounded-md hover:bg-[var(--hover-bg)] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
                                     >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18l6-6-6-6" /></svg>
                                     </button>
                                 </div>
                             </div>
                         )}
                     </div>
-                </ParticleCard>
+                </div>
             </BentoSection>
         </main>
     );
@@ -3656,13 +4188,16 @@ export default function LogExplorerClient({ initialData }: LogExplorerClientProp
 ================================================
 FILE: frontend/src/app/dashboard/logs/page.tsx
 ================================================
-import { searchLogs } from "../../actions";
+import { searchLogs, getSources } from "../../actions";
 import LogExplorerClient from "./LogExplorerClient";
 
 export default async function LogExplorerPage() {
-    const initialLogs = await searchLogs();
+    const [initialLogs, sources] = await Promise.all([
+        searchLogs(),
+        getSources(),
+    ]);
 
-    return <LogExplorerClient initialData={initialLogs} />;
+    return <LogExplorerClient initialData={initialLogs} sources={sources} />;
 }
 
 
@@ -3686,38 +4221,228 @@ FILE: frontend/src/app/dashboard/sources/SourcesClient.tsx
 ================================================
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useEffect, useCallback, useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { useTheme } from "@/components/ThemeProvider";
 import DotGrid from "@/components/ui/DotGrid";
 import { BentoSection, ParticleCard } from "@/components/ui/MagicBento";
-import { createSource, deleteSource, type LogSource } from "../../actions";
+import {
+    createSource,
+    deleteSource,
+    getSourceStatus,
+    type LogSource,
+} from "../../actions";
 
 interface SourcesClientProps {
     sources: LogSource[];
 }
 
+// ==========================================
+// Environment options with icons
+// ==========================================
+const ENVIRONMENTS = [
+    { id: "aws", label: "AWS", color: "orange" },
+    { id: "azure", label: "Azure", color: "blue" },
+    { id: "gcp", label: "GCP", color: "green" },
+    { id: "python", label: "Python", color: "yellow" },
+    { id: "nodejs", label: "Node.js", color: "emerald" },
+    { id: "docker", label: "Docker", color: "cyan" },
+    { id: "curl", label: "cURL", color: "purple" },
+] as const;
+
 const providerColors: Record<string, string> = {
     aws: "bg-orange-500/10 text-orange-400 border-orange-500/20",
     azure: "bg-blue-500/10 text-blue-400 border-blue-500/20",
     gcp: "bg-green-500/10 text-green-400 border-green-500/20",
+    python: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+    nodejs: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+    docker: "bg-cyan-500/10 text-cyan-400 border-cyan-500/20",
+    curl: "bg-purple-500/10 text-purple-400 border-purple-500/20",
 };
 
-const providerLabels: Record<string, string> = {
-    aws: "Amazon Web Services",
-    azure: "Microsoft Azure",
-    gcp: "Google Cloud Platform",
+const statusColors: Record<string, string> = {
+    waiting: "bg-yellow-500/10 text-yellow-400 border-yellow-500/20",
+    connected: "bg-green-500/10 text-green-400 border-green-500/20",
+    inactive: "bg-gray-500/10 text-gray-400 border-gray-500/20",
 };
 
-const providerShort: Record<string, string> = {
-    aws: "AWS",
-    azure: "Azure",
-    gcp: "GCP",
+const statusLabels: Record<string, string> = {
+    waiting: "Waiting",
+    connected: "Connected",
+    inactive: "Inactive",
 };
 
+// ==========================================
+// Code snippet generators
+// ==========================================
+function getSnippets(apiKey: string, backendUrl: string, provider: string) {
+    const snippets: Record<string, { label: string; language: string; code: string }[]> = {
+        python: [
+            {
+                label: "Python (requests)",
+                language: "python",
+                code: `import requests, json
+from datetime import datetime
+
+API_KEY = "${apiKey}"
+URL = "${backendUrl}/api/py/ingest/generic"
+
+log = {
+    "timestamp": datetime.utcnow().isoformat(),
+    "message": "User login successful",
+    "level": "info",
+    "source_ip": "192.168.1.100",
+    "status": "200"
+}
+
+resp = requests.post(URL,
+    json={"logs": [log]},
+    headers={"X-API-Key": API_KEY, "Content-Type": "application/json"}
+)
+print(resp.json())`,
+            },
+        ],
+        nodejs: [
+            {
+                label: "Node.js (fetch)",
+                language: "javascript",
+                code: `const API_KEY = "${apiKey}";
+const URL = "${backendUrl}/api/py/ingest/generic";
+
+const log = {
+  timestamp: new Date().toISOString(),
+  message: "Request processed",
+  level: "info",
+  source_ip: "10.0.0.1",
+  status: "200"
+};
+
+fetch(URL, {
+  method: "POST",
+  headers: { "X-API-Key": API_KEY, "Content-Type": "application/json" },
+  body: JSON.stringify({ logs: [log] })
+})
+.then(r => r.json())
+.then(console.log);`,
+            },
+        ],
+        docker: [
+            {
+                label: "Docker / Shell",
+                language: "bash",
+                code: `curl -X POST ${backendUrl}/api/py/ingest/generic \\
+  -H "X-API-Key: ${apiKey}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"logs": [{"timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'", "message": "Container started", "level": "info", "status": "200"}]}'`,
+            },
+        ],
+        curl: [
+            {
+                label: "cURL",
+                language: "bash",
+                code: `curl -X POST ${backendUrl}/api/py/ingest/generic \\
+  -H "X-API-Key: ${apiKey}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"logs": [{"timestamp": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'", "message": "Health check OK", "level": "info", "status": "200"}]}'`,
+            },
+        ],
+        aws: [
+            {
+                label: "Filebeat / Shell",
+                language: "bash",
+                code: `curl -X POST ${backendUrl}/api/py/ingest/aws \\
+  -H "X-API-Key: ${apiKey}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"logs": ["192.168.1.1 - - [05/Mar/2026:10:00:00 +0000] \\"GET /api/health HTTP/1.1\\" 200 45"]}'`,
+            },
+        ],
+        azure: [
+            {
+                label: "Azure Webhook",
+                language: "bash",
+                code: `curl -X POST ${backendUrl}/api/py/ingest/azure \\
+  -H "X-API-Key: ${apiKey}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"records": [{"time": "'$(date -u +%Y-%m-%dT%H:%M:%SZ)'", "callerIpAddress": "10.0.0.5", "operationName": "Microsoft.Web/sites/Read", "resultType": "Success"}]}'`,
+            },
+        ],
+        gcp: [
+            {
+                label: "GCP Pub/Sub Sink",
+                language: "bash",
+                code: `curl -X POST ${backendUrl}/api/py/ingest/gcp \\
+  -H "X-API-Key: ${apiKey}" \\
+  -H "Content-Type: application/json" \\
+  -d '{"message": {"data": "'$(echo '{"timestamp":"'$(date -u +%Y-%m-%dT%H:%M:%SZ)'","protoPayload":{"methodName":"storage.objects.get","requestMetadata":{"callerIp":"35.220.1.1"},"status":"ok"}}' | base64)'"}}'`,
+            },
+        ],
+    };
+    return snippets[provider] || snippets.curl;
+}
+
+// ==========================================
+// Main Component
+// ==========================================
 export default function SourcesClient({ sources }: SourcesClientProps) {
     const { theme } = useTheme();
+    const router = useRouter();
     const [isPending, startTransition] = useTransition();
     const [deletingId, setDeletingId] = useState<number | null>(null);
+
+    // Wizard state
+    const [wizardOpen, setWizardOpen] = useState(false);
+    const [wizardStep, setWizardStep] = useState(1);
+    const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
+    const [sourceName, setSourceName] = useState("");
+    const [sourceDescription, setSourceDescription] = useState("");
+    const [createdSource, setCreatedSource] = useState<LogSource | null>(null);
+    const [isConnected, setIsConnected] = useState(false);
+    const [copied, setCopied] = useState(false);
+
+    // Poll for connection status
+    useEffect(() => {
+        if (wizardStep !== 4 || !createdSource || isConnected) return;
+
+        const interval = setInterval(async () => {
+            try {
+                const status = await getSourceStatus(createdSource.id);
+                if (status.status === "connected") {
+                    setIsConnected(true);
+                    clearInterval(interval);
+                }
+            } catch { }
+        }, 3000);
+
+        return () => clearInterval(interval);
+    }, [wizardStep, createdSource, isConnected]);
+
+    const resetWizard = () => {
+        setWizardOpen(false);
+        setWizardStep(1);
+        setSelectedProvider(null);
+        setSourceName("");
+        setSourceDescription("");
+        setCreatedSource(null);
+        setIsConnected(false);
+        setCopied(false);
+    };
+
+    const handleCreate = () => {
+        if (!selectedProvider || !sourceName.trim()) return;
+        startTransition(async () => {
+            try {
+                const result = await createSource({
+                    name: sourceName.trim(),
+                    cloud_provider: selectedProvider,
+                    description: sourceDescription.trim() || undefined,
+                });
+                setCreatedSource(result);
+                setWizardStep(3);
+            } catch (e) {
+                console.error("Failed to create source:", e);
+            }
+        });
+    };
 
     const handleDelete = (id: number) => {
         setDeletingId(id);
@@ -3726,6 +4451,14 @@ export default function SourcesClient({ sources }: SourcesClientProps) {
             setDeletingId(null);
         });
     };
+
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
+
+    const backendUrl = typeof window !== "undefined" ? window.location.origin : "https://your-backend-url";
 
     return (
         <main className="relative min-h-screen">
@@ -3745,178 +4478,320 @@ export default function SourcesClient({ sources }: SourcesClientProps) {
 
             <BentoSection className="relative z-10 p-6 lg:p-8" glowColor="255, 255, 255">
                 {/* Header */}
-                <div className="mb-6">
-                    <h1 className="text-2xl font-bold text-[var(--text-main)] font-[family-name:var(--font-space-grotesk)]">
-                        Log Sources
-                    </h1>
-                    <p className="text-[var(--text-subtle)] text-sm mt-1">
-                        Manage your cloud log sources. Each source represents a connection to AWS, Azure, or GCP.
-                    </p>
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h1 className="text-2xl font-bold text-[var(--text-main)] font-[family-name:var(--font-space-grotesk)]">
+                            Log Sources
+                        </h1>
+                        <p className="text-[var(--text-subtle)] text-sm mt-1">
+                            Connect your applications and cloud services. Each source gets a unique API key.
+                        </p>
+                    </div>
+                    <button
+                        onClick={() => { resetWizard(); setWizardOpen(true); }}
+                        className="px-5 py-2.5 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] rounded-lg font-medium text-sm hover:opacity-90 transition-all flex items-center gap-2"
+                    >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19" />
+                            <line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>
+                        Add Source
+                    </button>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
-                    {/* Add New Source Form */}
-                    <ParticleCard
-                        enableTilt={false}
-                        enableMagnetism={false}
-                        glowColor="255, 255, 255"
-                        className="lg:col-span-2 card--border-glow bg-[var(--card-bg)] backdrop-blur-[20px] rounded-xl border border-[var(--divider)]"
-                    >
-                        <div className="p-6 relative z-10">
-                            <div className="flex items-center gap-2 mb-6">
-                                <div className="w-6 h-6 rounded-full bg-[var(--badge-bg)] flex items-center justify-center">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                        <line x1="12" y1="5" x2="12" y2="19" />
-                                        <line x1="5" y1="12" x2="19" y2="12" />
-                                    </svg>
-                                </div>
-                                <h2 className="font-semibold text-[var(--text-main)] text-sm">Add Source</h2>
-                            </div>
-                            <form action={createSource} className="space-y-4">
+                {/* ========== WIZARD MODAL ========== */}
+                {wizardOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+                        <div className="bg-[var(--card-bg)] border border-[var(--divider)] rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl">
+                            {/* Wizard Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-[var(--divider)]">
                                 <div>
-                                    <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">
-                                        Source Name
-                                    </label>
-                                    <input
-                                        name="name"
-                                        type="text"
-                                        placeholder="e.g. Production Web Server"
-                                        className="w-full px-4 py-2.5 border border-[var(--input-border)] rounded-lg bg-[var(--input-bg)] text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border-light)]"
-                                        required
-                                    />
+                                    <h2 className="text-lg font-bold text-[var(--text-main)]">
+                                        {wizardStep === 1 && "Select Environment"}
+                                        {wizardStep === 2 && "Name Your Source"}
+                                        {wizardStep === 3 && "Integration Setup"}
+                                        {wizardStep === 4 && (isConnected ? "Connected!" : "Listening...")}
+                                    </h2>
+                                    <p className="text-[var(--text-subtle)] text-xs mt-0.5">
+                                        Step {Math.min(wizardStep, 4)} of 4
+                                    </p>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">
-                                        Cloud Provider
-                                    </label>
-                                    <select
-                                        name="cloud_provider"
-                                        className="w-full px-4 py-2.5 border border-[var(--input-border)] rounded-lg bg-[var(--input-bg)] text-sm text-[var(--text-main)] focus:outline-none focus:border-[var(--border-light)]"
-                                        required
-                                    >
-                                        <option value="aws">Amazon Web Services (AWS)</option>
-                                        <option value="azure">Microsoft Azure</option>
-                                        <option value="gcp">Google Cloud Platform (GCP)</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">
-                                        Description
-                                    </label>
-                                    <textarea
-                                        name="description"
-                                        rows={3}
-                                        placeholder="Details about this log source..."
-                                        className="w-full px-4 py-2.5 border border-[var(--input-border)] rounded-lg bg-[var(--input-bg)] text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border-light)] resize-none"
-                                    />
-                                </div>
-                                <button
-                                    type="submit"
-                                    className="w-full py-2.5 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] rounded-lg font-medium text-sm hover:opacity-90 transition-colors"
-                                >
-                                    Register Source
+                                <button onClick={resetWizard} className="text-[var(--text-subtle)] hover:text-[var(--text-main)] transition-colors p-1">
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 6L6 18M6 6l12 12" /></svg>
                                 </button>
-                            </form>
-
-                            {/* Ingest API Info */}
-                            <div className="mt-6 p-4 rounded-lg bg-[var(--surface)] border border-[var(--border)]">
-                                <h3 className="text-xs font-semibold text-[var(--text-main)] mb-2">Ingest Endpoint</h3>
-                                <p className="text-[11px] text-[var(--text-subtle)] mb-2">
-                                    Use these endpoints to push logs from your cloud agents:
-                                </p>
-                                <div className="space-y-1 font-mono text-[11px] text-[var(--text-muted)]">
-                                    <p><span className="text-orange-400">AWS:</span> POST /ingest/aws</p>
-                                    <p><span className="text-blue-400">Azure:</span> POST /ingest/azure</p>
-                                    <p><span className="text-green-400">GCP:</span> POST /ingest/gcp</p>
-                                </div>
-                                <p className="text-[11px] text-[var(--text-subtle)] mt-2">
-                                    Set <code className="text-[var(--text-muted)]">X-Ingest-Api-Key</code> header for auth.
-                                </p>
-                            </div>
-                        </div>
-                    </ParticleCard>
-
-                    {/* Source List */}
-                    <ParticleCard
-                        enableTilt={false}
-                        enableMagnetism={false}
-                        glowColor="255, 255, 255"
-                        className="lg:col-span-3 card--border-glow bg-[var(--card-bg)] backdrop-blur-[20px] rounded-xl border border-[var(--divider)]"
-                    >
-                        <div className="relative z-10">
-                            <div className="p-5 border-b border-[var(--divider)]">
-                                <h2 className="font-semibold text-[var(--text-main)] text-sm">
-                                    Registered Sources
-                                    <span className="ml-2 text-[var(--text-subtle)] font-normal">
-                                        ({sources.length})
-                                    </span>
-                                </h2>
                             </div>
 
-                            <div className="grid grid-cols-12 gap-4 px-5 py-3 text-[11px] font-medium text-[var(--text-subtle)] uppercase tracking-wider border-b border-[var(--divider)]">
-                                <div className="col-span-1">ID</div>
-                                <div className="col-span-2">Provider</div>
-                                <div className="col-span-3">Name</div>
-                                <div className="col-span-3">Description</div>
-                                <div className="col-span-1">Status</div>
-                                <div className="col-span-2 text-right">Actions</div>
-                            </div>
-
-                            <div className="divide-y divide-[var(--divider)]">
-                                {sources.length === 0 ? (
-                                    <div className="px-5 py-12 text-center text-[var(--text-subtle)] text-sm">
-                                        No sources registered yet. Create one to get started.
-                                    </div>
-                                ) : (
-                                    sources.map((src) => (
+                            {/* Step Progress */}
+                            <div className="px-6 pt-4">
+                                <div className="flex gap-1">
+                                    {[1, 2, 3, 4].map((step) => (
                                         <div
-                                            key={src.id}
-                                            className="grid grid-cols-12 gap-4 px-5 py-3.5 hover:bg-[var(--hover-bg)] transition-colors items-center"
+                                            key={step}
+                                            className={`h-1 flex-1 rounded-full transition-colors ${step <= wizardStep ? "bg-blue-500" : "bg-[var(--divider)]"
+                                                }`}
+                                        />
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div className="p-6">
+                                {/* ---- STEP 1: Select environment ---- */}
+                                {wizardStep === 1 && (
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {ENVIRONMENTS.map((env) => (
+                                            <button
+                                                key={env.id}
+                                                onClick={() => {
+                                                    setSelectedProvider(env.id);
+                                                    setWizardStep(2);
+                                                }}
+                                                className={`p-4 rounded-xl border transition-all text-left hover:scale-[1.02] active:scale-[0.98] ${selectedProvider === env.id
+                                                    ? `${providerColors[env.id]} border-current`
+                                                    : "border-[var(--divider)] hover:border-[var(--border-light)] bg-[var(--surface)]"
+                                                    }`}
+                                            >
+                                                <span className="text-sm font-semibold text-[var(--text-main)]">{env.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+
+                                {/* ---- STEP 2: Name the source ---- */}
+                                {wizardStep === 2 && (
+                                    <div className="space-y-4">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <span className={`px-2.5 py-1 rounded-lg text-xs font-bold uppercase border ${providerColors[selectedProvider!]}`}>
+                                                {ENVIRONMENTS.find((e) => e.id === selectedProvider)?.label}
+                                            </span>
+                                            <button
+                                                onClick={() => setWizardStep(1)}
+                                                className="text-xs text-[var(--text-subtle)] hover:text-[var(--text-main)] underline"
+                                            >
+                                                Change
+                                            </button>
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">
+                                                Source Name
+                                            </label>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. Production Billing Service"
+                                                value={sourceName}
+                                                onChange={(e) => setSourceName(e.target.value)}
+                                                className="w-full px-4 py-2.5 border border-[var(--input-border)] rounded-lg bg-[var(--input-bg)] text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border-light)]"
+                                                autoFocus
+                                            />
+                                        </div>
+                                        <div>
+                                            <label className="block text-xs font-medium text-[var(--text-muted)] mb-1.5">
+                                                Description <span className="text-[var(--text-subtle)]">(optional)</span>
+                                            </label>
+                                            <textarea
+                                                rows={2}
+                                                placeholder="What does this source do?"
+                                                value={sourceDescription}
+                                                onChange={(e) => setSourceDescription(e.target.value)}
+                                                className="w-full px-4 py-2.5 border border-[var(--input-border)] rounded-lg bg-[var(--input-bg)] text-sm text-[var(--text-main)] placeholder:text-[var(--text-subtle)] focus:outline-none focus:border-[var(--border-light)] resize-none"
+                                            />
+                                        </div>
+                                        <button
+                                            onClick={handleCreate}
+                                            disabled={!sourceName.trim() || isPending}
+                                            className="w-full py-2.5 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] rounded-lg font-medium text-sm hover:opacity-90 transition-colors disabled:opacity-50"
                                         >
-                                            <div className="col-span-1 text-[var(--text-subtle)] text-sm font-mono">
-                                                #{src.id}
-                                            </div>
-                                            <div className="col-span-2">
-                                                <span
-                                                    className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${providerColors[src.cloud_provider] ||
-                                                        "bg-gray-500/10 text-gray-400 border-gray-500/20"
-                                                        }`}
-                                                >
-                                                    {providerShort[src.cloud_provider] || src.cloud_provider}
-                                                </span>
-                                            </div>
-                                            <div className="col-span-3 font-medium text-[var(--text-main)] text-sm">
-                                                {src.name}
-                                            </div>
-                                            <div className="col-span-3 text-[var(--text-subtle)] text-sm truncate">
-                                                {src.description || "—"}
-                                            </div>
-                                            <div className="col-span-1">
-                                                <span
-                                                    className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${src.is_active
-                                                            ? "bg-green-500/10 text-green-400 border-green-500/20"
-                                                            : "bg-red-500/10 text-red-400 border-red-500/20"
-                                                        }`}
-                                                >
-                                                    {src.is_active ? "Active" : "Off"}
-                                                </span>
-                                            </div>
-                                            <div className="col-span-2 flex justify-end">
+                                            {isPending ? "Creating..." : "Create Source"}
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* ---- STEP 3: Integration snippets ---- */}
+                                {wizardStep === 3 && createdSource && (
+                                    <div className="space-y-4">
+                                        {/* API Key display */}
+                                        <div className="p-4 rounded-xl bg-[var(--surface)] border border-[var(--border)]">
+                                            <div className="flex items-center justify-between mb-2">
+                                                <span className="text-xs font-semibold text-[var(--text-muted)]">Your API Key</span>
                                                 <button
-                                                    onClick={() => handleDelete(src.id)}
-                                                    disabled={deletingId === src.id || isPending}
-                                                    className="px-3 py-1 text-xs text-red-400 border border-red-500/20 rounded-md hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                                    onClick={() => handleCopy(createdSource.api_key)}
+                                                    className="text-xs text-blue-400 hover:text-blue-300 transition-colors"
                                                 >
-                                                    {deletingId === src.id ? "..." : "Delete"}
+                                                    {copied ? "✓ Copied!" : "Copy"}
                                                 </button>
                                             </div>
+                                            <code className="text-sm font-mono text-[var(--text-main)] bg-[var(--input-bg)] px-3 py-2 rounded-lg block break-all select-all">
+                                                {createdSource.api_key}
+                                            </code>
                                         </div>
-                                    ))
+
+                                        {/* Code snippets */}
+                                        <div>
+                                            <h3 className="text-xs font-semibold text-[var(--text-muted)] mb-2">Quick Start Code</h3>
+                                            {getSnippets(createdSource.api_key, backendUrl, createdSource.cloud_provider).map(
+                                                (snippet, i) => (
+                                                    <div key={i} className="rounded-xl border border-[var(--border)] overflow-hidden mb-3">
+                                                        <div className="flex items-center justify-between px-4 py-2 bg-[var(--surface)] border-b border-[var(--border)]">
+                                                            <span className="text-xs font-semibold text-[var(--text-muted)]">{snippet.label}</span>
+                                                            <button
+                                                                onClick={() => handleCopy(snippet.code)}
+                                                                className="text-[11px] text-blue-400 hover:text-blue-300"
+                                                            >
+                                                                Copy
+                                                            </button>
+                                                        </div>
+                                                        <pre className="p-4 text-xs font-mono text-[var(--text-main)] bg-[var(--input-bg)] overflow-x-auto leading-relaxed">
+                                                            <code>{snippet.code}</code>
+                                                        </pre>
+                                                    </div>
+                                                )
+                                            )}
+                                        </div>
+
+                                        <button
+                                            onClick={() => setWizardStep(4)}
+                                            className="w-full py-2.5 bg-[var(--btn-primary-bg)] text-[var(--btn-primary-fg)] rounded-lg font-medium text-sm hover:opacity-90 transition-colors"
+                                        >
+                                            I{"'"}ve deployed the code — Listen for logs
+                                        </button>
+                                    </div>
+                                )}
+
+                                {/* ---- STEP 4: Listening / Connected ---- */}
+                                {wizardStep === 4 && (
+                                    <div className="text-center py-8">
+                                        {!isConnected ? (
+                                            <>
+                                                {/* Pulsing radar animation */}
+                                                <div className="relative mx-auto w-24 h-24 mb-6">
+                                                    <div className="absolute inset-0 rounded-full bg-blue-500/20 animate-ping" />
+                                                    <div className="absolute inset-2 rounded-full bg-blue-500/30 animate-ping" style={{ animationDelay: "0.5s" }} />
+                                                    <div className="absolute inset-0 flex items-center justify-center">
+                                                        <div className="w-8 h-8 rounded-full bg-blue-500/40 flex items-center justify-center">
+                                                            <div className="w-3 h-3 rounded-full bg-blue-500" />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <h3 className="text-lg font-semibold text-[var(--text-main)] mb-2">
+                                                    Listening for incoming logs...
+                                                </h3>
+                                                <p className="text-sm text-[var(--text-subtle)] max-w-md mx-auto">
+                                                    Deploy your code with the API key above and we{"'"}ll automatically detect data arriving.
+                                                </p>
+                                                <button
+                                                    onClick={resetWizard}
+                                                    className="mt-6 text-xs text-[var(--text-subtle)] hover:text-[var(--text-main)] underline"
+                                                >
+                                                    Skip — I{"'"}ll connect later
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                {/* Success state */}
+                                                <div className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
+                                                    <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="rgb(34, 197, 94)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                                                        <polyline points="20 6 9 17 4 12" />
+                                                    </svg>
+                                                </div>
+                                                <h3 className="text-lg font-semibold text-green-400 mb-2">Connection Established!</h3>
+                                                <p className="text-sm text-[var(--text-subtle)] mb-6">
+                                                    First log received from <strong className="text-[var(--text-main)]">{createdSource?.name}</strong>.
+                                                </p>
+                                                <button
+                                                    onClick={() => {
+                                                        resetWizard();
+                                                        router.push(`/dashboard/logs?source_id=${createdSource?.id}`);
+                                                    }}
+                                                    className="px-6 py-2.5 bg-green-500 text-white rounded-lg font-medium text-sm hover:bg-green-600 transition-colors"
+                                                >
+                                                    View Logs →
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 )}
                             </div>
                         </div>
-                    </ParticleCard>
-                </div>
+                    </div>
+                )}
+
+                {/* ========== SOURCE LIST ========== */}
+                <ParticleCard
+                    enableTilt={false}
+                    enableMagnetism={false}
+                    glowColor="255, 255, 255"
+                    className="card--border-glow bg-[var(--card-bg)] backdrop-blur-[20px] rounded-xl border border-[var(--divider)]"
+                >
+                    <div className="relative z-10">
+                        <div className="p-5 border-b border-[var(--divider)]">
+                            <h2 className="font-semibold text-[var(--text-main)] text-sm">
+                                Registered Sources
+                                <span className="ml-2 text-[var(--text-subtle)] font-normal">
+                                    ({sources.length})
+                                </span>
+                            </h2>
+                        </div>
+
+                        <div className="grid grid-cols-12 gap-4 px-5 py-3 text-[11px] font-medium text-[var(--text-subtle)] uppercase tracking-wider border-b border-[var(--divider)]">
+                            <div className="col-span-1">ID</div>
+                            <div className="col-span-2">Type</div>
+                            <div className="col-span-3">Name</div>
+                            <div className="col-span-2">Status</div>
+                            <div className="col-span-2">API Key</div>
+                            <div className="col-span-2 text-right">Actions</div>
+                        </div>
+
+                        <div className="divide-y divide-[var(--divider)]">
+                            {sources.length === 0 ? (
+                                <div className="px-5 py-12 text-center text-[var(--text-subtle)] text-sm">
+                                    No sources registered yet. Click <strong>Add Source</strong> to get started.
+                                </div>
+                            ) : (
+                                sources.map((src) => (
+                                    <div
+                                        key={src.id}
+                                        className="grid grid-cols-12 gap-4 px-5 py-3.5 hover:bg-[var(--hover-bg)] transition-colors items-center"
+                                    >
+                                        <div className="col-span-1 text-[var(--text-subtle)] text-sm font-mono">
+                                            #{src.id}
+                                        </div>
+                                        <div className="col-span-2">
+                                            <span
+                                                className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase border ${providerColors[src.cloud_provider] ||
+                                                    "bg-gray-500/10 text-gray-400 border-gray-500/20"
+                                                    }`}
+                                            >
+                                                {src.cloud_provider}
+                                            </span>
+                                        </div>
+                                        <div className="col-span-3 font-medium text-[var(--text-main)] text-sm">
+                                            {src.name}
+                                        </div>
+                                        <div className="col-span-2">
+                                            <span
+                                                className={`px-2 py-0.5 rounded-full text-[11px] font-medium border ${statusColors[src.status] || statusColors.inactive
+                                                    }`}
+                                            >
+                                                {statusLabels[src.status] || src.status}
+                                            </span>
+                                        </div>
+                                        <div className="col-span-2 text-[11px] text-[var(--text-subtle)] font-mono truncate" title={src.api_key}>
+                                            {src.api_key.slice(0, 12)}...
+                                        </div>
+                                        <div className="col-span-2 flex justify-end">
+                                            <button
+                                                onClick={() => handleDelete(src.id)}
+                                                disabled={deletingId === src.id || isPending}
+                                                className="px-3 py-1 text-xs text-red-400 border border-red-500/20 rounded-md hover:bg-red-500/10 transition-colors disabled:opacity-50"
+                                            >
+                                                {deletingId === src.id ? "..." : "Delete"}
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+                </ParticleCard>
             </BentoSection>
         </main>
     );
@@ -5002,7 +5877,8 @@ const DotGrid: React.FC<DotGridProps> = ({
             pr.vy = vy;
             pr.speed = speed;
 
-            const rect = canvasRef.current!.getBoundingClientRect();
+            if (!canvasRef.current) return;
+            const rect = canvasRef.current.getBoundingClientRect();
             pr.x = e.clientX - rect.left;
             pr.y = e.clientY - rect.top;
 
@@ -5030,7 +5906,8 @@ const DotGrid: React.FC<DotGridProps> = ({
         };
 
         const onClick = (e: MouseEvent) => {
-            const rect = canvasRef.current!.getBoundingClientRect();
+            if (!canvasRef.current) return;
+            const rect = canvasRef.current.getBoundingClientRect();
             const cx = e.clientX - rect.left;
             const cy = e.clientY - rect.top;
             for (const dot of dotsRef.current) {
@@ -5846,6 +6723,58 @@ export const BentoSection: React.FC<{
 
 
 ================================================
+FILE: frontend/src/components/ui/SafeDate.tsx
+================================================
+"use client";
+
+import { useState, useEffect } from "react";
+
+interface SafeDateProps {
+    date: string | number | Date;
+    options?: Intl.DateTimeFormatOptions;
+    mode?: "toLocaleString" | "toLocaleTimeString" | "toLocaleDateString";
+    className?: string;
+    placeholder?: string;
+}
+
+export default function SafeDate({
+    date,
+    options,
+    mode = "toLocaleString",
+    className,
+    placeholder = "—"
+}: SafeDateProps) {
+    const [mounted, setMounted] = useState(false);
+
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    if (!mounted) {
+        return <span className={className}>{placeholder}</span>;
+    }
+
+    try {
+        const d = new Date(date);
+        let formatted = "";
+
+        if (mode === "toLocaleString") {
+            formatted = d.toLocaleString("en-US", options);
+        } else if (mode === "toLocaleTimeString") {
+            formatted = d.toLocaleTimeString("en-US", options);
+        } else if (mode === "toLocaleDateString") {
+            formatted = d.toLocaleDateString("en-US", options);
+        }
+
+        return <span className={className}>{formatted}</span>;
+    } catch (e) {
+        return <span className={className}>{placeholder}</span>;
+    }
+}
+
+
+
+================================================
 FILE: frontend/src/components/ui/Stepper.tsx
 ================================================
 'use client';
@@ -6405,5 +7334,460 @@ export const auth = betterAuth({
         organization()
     ]
 });
+
+
+
+================================================
+FILE: nginx/nginx.conf.template
+================================================
+# WebSocket upgrade map for Next.js HMR
+map $http_upgrade $connection_upgrade {
+    default upgrade;
+    ''      close;
+}
+
+server {
+    listen 80;
+    server_name ${NGINX_SERVER_NAME};
+    client_max_body_size 50M;   # Allow large file uploads
+
+    # ── Forwarded headers (Critical for CSRF & Auth) ──
+    proxy_set_header Host              ${NGINX_HOST};
+    proxy_set_header X-Real-IP         $remote_addr;
+    proxy_set_header X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto ${NGINX_FORWARDED_PROTO};
+    proxy_set_header X-Forwarded-Host  ${NGINX_HOST};
+
+    # ── WebSocket support ──
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade    $http_upgrade;
+    proxy_set_header Connection $connection_upgrade;
+
+    # ── Python Backend: /api/py/ → backend:8000 ──
+    location /api/py/ {
+        proxy_pass http://backend:8000/;
+    }
+
+    # ── Frontend: everything else → frontend:3000 ──
+    location / {
+        proxy_pass http://frontend:3000;
+    }
+}
+
+
+
+================================================
+FILE: scripts/deploy_log_generator.sh
+================================================
+#!/bin/bash
+
+# ===================================================================
+#   PINNACLE SIEM — Deploy Log Generator to Azure Container Instance
+# -------------------------------------------------------------------
+#   Prerequisites:
+#   - az login completed
+#   - ngrok running and URL known
+#   - Azure Student subscription active
+# ===================================================================
+
+set -e
+
+# ============================================
+# CONFIGURATION
+# ============================================
+RESOURCE_GROUP="rg-pinnacle-logsim"
+LOCATION="centralindia"          # Close to India for lower latency
+ACR_NAME="pinnaclelogsim"        # Must be globally unique, alphanumeric
+CONTAINER_NAME="pinnacle-log-generator"
+IMAGE_NAME="log-generator"
+
+# These will be prompted if not set
+SIEM_URL="${SIEM_URL:-}"
+INGEST_API_KEY="${INGEST_API_KEY:-siem_ingest_key_change_me_in_production}"
+LOG_COUNT="${LOG_COUNT:-5}"
+LOG_INTERVAL="${LOG_INTERVAL:-10}"
+
+# ============================================
+# COLORS
+# ============================================
+GREEN='\033[0;32m'
+BLUE='\033[0;34m'
+RED='\033[0;31m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+print_step() { echo -e "\n${BLUE}==>${NC} ${GREEN}$1${NC}"; }
+print_error() { echo -e "${RED}❌ $1${NC}"; }
+print_success() { echo -e "${GREEN}✅ $1${NC}"; }
+
+# ============================================
+# VALIDATE INPUTS
+# ============================================
+if [ -z "$SIEM_URL" ]; then
+    echo ""
+    echo "Enter your ngrok HTTPS URL (e.g. https://abc123.ngrok-free.app):"
+    read -r NGROK_URL
+    SIEM_URL="${NGROK_URL}/api/py"
+    echo ""
+fi
+
+echo ""
+echo "╔══════════════════════════════════════════════╗"
+echo "║  Pinnacle SIEM — Log Generator Deployment    ║"
+echo "╠══════════════════════════════════════════════╣"
+echo "║  Target URL : ${SIEM_URL}"
+echo "║  API Key    : ${INGEST_API_KEY:0:8}..."
+echo "║  Batch Size : ${LOG_COUNT} logs/provider"
+echo "║  Interval   : ${LOG_INTERVAL}s"
+echo "║  Region     : ${LOCATION}"
+echo "╚══════════════════════════════════════════════╝"
+echo ""
+
+# ============================================
+# STEP 1: Create Resource Group
+# ============================================
+print_step "Creating Resource Group: ${RESOURCE_GROUP}"
+az group create --name ${RESOURCE_GROUP} --location ${LOCATION} --output none
+
+# ============================================
+# STEP 2: Create Container Registry (if needed)
+# ============================================
+print_step "Ensuring Container Registry: ${ACR_NAME}"
+if ! az acr show --name ${ACR_NAME} --resource-group ${RESOURCE_GROUP} &>/dev/null; then
+    az acr create \
+        --resource-group ${RESOURCE_GROUP} \
+        --name ${ACR_NAME} \
+        --sku Basic \
+        --admin-enabled true \
+        --output none
+    print_success "ACR created"
+else
+    echo "   ACR already exists, skipping."
+fi
+
+# ============================================
+# STEP 3: Build & Push Image
+# ============================================
+print_step "Logging into ACR..."
+az acr login --name ${ACR_NAME}
+
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+print_step "Building log generator image..."
+docker build \
+    --platform linux/amd64 \
+    -t "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest" \
+    -f "${SCRIPT_DIR}/Dockerfile.loggenerator" \
+    "${SCRIPT_DIR}"
+
+print_step "Pushing to ACR..."
+docker push "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest"
+
+# ============================================
+# STEP 4: Deploy Container Instance
+# ============================================
+print_step "Deploying Azure Container Instance..."
+
+# Get ACR credentials
+ACR_PASSWORD=$(az acr credential show --name ${ACR_NAME} --query "passwords[0].value" -o tsv)
+
+# Delete existing container if it exists
+az container delete \
+    --resource-group ${RESOURCE_GROUP} \
+    --name ${CONTAINER_NAME} \
+    --yes --output none 2>/dev/null || true
+
+az container create \
+    --resource-group ${RESOURCE_GROUP} \
+    --name ${CONTAINER_NAME} \
+    --image "${ACR_NAME}.azurecr.io/${IMAGE_NAME}:latest" \
+    --registry-login-server "${ACR_NAME}.azurecr.io" \
+    --registry-username ${ACR_NAME} \
+    --registry-password ${ACR_PASSWORD} \
+    --cpu 0.5 \
+    --memory 0.5 \
+    --os-type Linux \
+    --restart-policy Always \
+    --environment-variables \
+        SIEM_URL="${SIEM_URL}" \
+        INGEST_API_KEY="${INGEST_API_KEY}" \
+    --command-line "python -u generate_logs.py --url ${SIEM_URL} --api-key ${INGEST_API_KEY} --count ${LOG_COUNT} --interval ${LOG_INTERVAL}" \
+    --output none
+
+# ============================================
+# STEP 5: Verify
+# ============================================
+print_step "Checking container status..."
+sleep 5
+STATE=$(az container show \
+    --resource-group ${RESOURCE_GROUP} \
+    --name ${CONTAINER_NAME} \
+    --query "instanceView.state" -o tsv 2>/dev/null || echo "Unknown")
+
+echo "   Container State: ${STATE}"
+
+print_step "Fetching recent logs..."
+az container logs \
+    --resource-group ${RESOURCE_GROUP} \
+    --name ${CONTAINER_NAME} \
+    --tail 20 2>/dev/null || echo "   (Logs not yet available, container may still be starting)"
+
+echo ""
+print_success "Log Generator Deployed! 🚀"
+echo ""
+echo "  Useful commands:"
+echo "    View logs:   az container logs -g ${RESOURCE_GROUP} -n ${CONTAINER_NAME} --follow"
+echo "    Stop:        az container stop -g ${RESOURCE_GROUP} -n ${CONTAINER_NAME}"
+echo "    Restart:     az container restart -g ${RESOURCE_GROUP} -n ${CONTAINER_NAME}"
+echo "    Delete all:  az group delete -g ${RESOURCE_GROUP} --yes --no-wait"
+echo ""
+
+
+
+================================================
+FILE: scripts/Dockerfile.loggenerator
+================================================
+FROM python:3.10-slim
+
+WORKDIR /app
+COPY generate_logs.py .
+
+# No pip install needed — script uses only stdlib (urllib)
+CMD ["python", "-u", "generate_logs.py"]
+
+
+
+================================================
+FILE: scripts/generate_logs.py
+================================================
+#!/usr/bin/env python3
+"""
+SIEM Log Generator — Sends realistic fake logs to the Pinnacle SIEM backend.
+
+Supports all 3 cloud providers: AWS (Nginx lines), Azure (Diagnostic JSON), GCP (Pub/Sub).
+Runs in a loop or single-shot mode (--once).
+
+Usage:
+  # Local testing
+  python generate_logs.py --url http://localhost/api/py --api-key siem_ingest_key_change_me_in_production --once
+
+  # Continuous (for Azure Container Instance)
+  python generate_logs.py --url https://<ngrok-url>/api/py --api-key <key> --interval 8
+"""
+
+import argparse
+import json
+import random
+import time
+import base64
+import urllib.request
+import urllib.error
+from datetime import datetime, timezone, timedelta
+
+
+# ─── Realistic Data Pools ────────────────────────────────────────────────────
+
+SAMPLE_IPS = [
+    "10.0.1.45", "172.16.0.12", "192.168.1.100", "10.0.2.88",
+    "203.0.113.50", "198.51.100.23", "172.31.0.7", "10.10.5.201",
+    "192.168.10.55", "10.0.0.1", "34.120.50.12", "52.183.90.44",
+    "13.107.42.14", "104.18.22.33", "185.199.108.153",
+]
+
+HTTP_METHODS = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"]
+HTTP_PATHS = [
+    "/", "/api/users", "/api/auth/login", "/api/products", "/health",
+    "/api/orders", "/api/v2/search", "/dashboard", "/api/logs",
+    "/api/settings", "/static/app.js", "/static/style.css",
+    "/api/notifications", "/api/analytics", "/favicon.ico",
+]
+HTTP_STATUSES = ["200", "200", "200", "201", "301", "304", "400", "401", "403", "404", "500", "502"]
+
+AZURE_OPERATIONS = [
+    "Microsoft.Compute/virtualMachines/start/action",
+    "Microsoft.Compute/virtualMachines/deallocate/action",
+    "Microsoft.Storage/storageAccounts/listKeys/action",
+    "Microsoft.Network/networkSecurityGroups/write",
+    "Microsoft.Web/sites/restart/action",
+    "Microsoft.Sql/servers/databases/read",
+    "Microsoft.Authorization/roleAssignments/write",
+    "Microsoft.KeyVault/vaults/secrets/read",
+    "Microsoft.ContainerRegistry/registries/push/write",
+    "Microsoft.Resources/deployments/write",
+]
+AZURE_RESULT_TYPES = ["Success", "Success", "Success", "Failed", "Conflict", "Forbidden"]
+
+GCP_METHODS = [
+    "storage.objects.get", "storage.objects.create", "storage.buckets.list",
+    "compute.instances.start", "compute.instances.stop",
+    "iam.serviceAccounts.actAs", "bigquery.jobs.create",
+    "pubsub.topics.publish", "run.services.create",
+    "cloudfunctions.functions.call",
+]
+GCP_STATUSES = ["OK", "OK", "OK", "PERMISSION_DENIED", "NOT_FOUND", "ALREADY_EXISTS"]
+
+
+# ─── Log Generators ──────────────────────────────────────────────────────────
+
+def generate_aws_logs(count: int = 5) -> list[str]:
+    """Generate Nginx-style access log lines."""
+    logs = []
+    for _ in range(count):
+        ip = random.choice(SAMPLE_IPS)
+        method = random.choice(HTTP_METHODS)
+        path = random.choice(HTTP_PATHS)
+        status = random.choice(HTTP_STATUSES)
+        size = random.randint(128, 65536)
+        ts = datetime.now(timezone.utc) - timedelta(seconds=random.randint(0, 300))
+        ts_str = ts.strftime("%d/%b/%Y:%H:%M:%S +0000")
+        line = f'{ip} - - [{ts_str}] "{method} {path} HTTP/1.1" {status} {size}'
+        logs.append(line)
+    return logs
+
+
+def generate_azure_records(count: int = 5) -> list[dict]:
+    """Generate Azure Diagnostic Settings JSON records."""
+    records = []
+    for _ in range(count):
+        ts = datetime.now(timezone.utc) - timedelta(seconds=random.randint(0, 300))
+        record = {
+            "time": ts.isoformat(),
+            "callerIpAddress": random.choice(SAMPLE_IPS),
+            "operationName": random.choice(AZURE_OPERATIONS),
+            "resultType": random.choice(AZURE_RESULT_TYPES),
+            "category": "Administrative",
+            "correlationId": f"{random.randint(10000000, 99999999)}-{random.randint(1000, 9999)}",
+            "level": random.choice(["Information", "Warning", "Error"]),
+            "resourceId": f"/subscriptions/sub-{random.randint(1000,9999)}/resourceGroups/rg-demo",
+        }
+        records.append(record)
+    return records
+
+
+def generate_gcp_message() -> dict:
+    """Generate a GCP Pub/Sub message with base64-encoded log payload."""
+    ts = datetime.now(timezone.utc) - timedelta(seconds=random.randint(0, 300))
+    payload = {
+        "timestamp": ts.isoformat(),
+        "protoPayload": {
+            "methodName": random.choice(GCP_METHODS),
+            "status": random.choice(GCP_STATUSES),  # String, not dict — avoids ES mapping conflict
+            "requestMetadata": {
+                "callerIp": random.choice(SAMPLE_IPS),
+            },
+            "serviceName": "storage.googleapis.com",
+        },
+        "resource": {
+            "type": "gcs_bucket",
+            "labels": {"bucket_name": f"demo-bucket-{random.randint(1, 100)}"},
+        },
+    }
+    encoded = base64.b64encode(json.dumps(payload).encode()).decode()
+    return {"data": encoded}
+
+
+# ─── Sender ───────────────────────────────────────────────────────────────────
+
+def send_logs(base_url: str, api_key: str, endpoint: str, payload: dict) -> bool:
+    """POST logs to the SIEM backend. Returns True on success."""
+    url = f"{base_url.rstrip('/')}/ingest/{endpoint}"
+    data = json.dumps(payload).encode("utf-8")
+
+    req = urllib.request.Request(
+        url,
+        data=data,
+        headers={
+            "Content-Type": "application/json",
+            "X-Ingest-Api-Key": api_key,
+        },
+        method="POST",
+    )
+
+    try:
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            body = json.loads(resp.read().decode())
+            print(f"  ✅ [{endpoint.upper():>5}] {resp.status} — {body}")
+            return True
+    except urllib.error.HTTPError as e:
+        err_body = e.read().decode() if e.fp else ""
+        print(f"  ❌ [{endpoint.upper():>5}] HTTP {e.code} — {err_body}")
+        return False
+    except Exception as e:
+        print(f"  ❌ [{endpoint.upper():>5}] Error: {e}")
+        return False
+
+
+def send_batch(base_url: str, api_key: str, count: int):
+    """Generate and send one batch of logs for all 3 providers."""
+    ts = datetime.now().strftime("%H:%M:%S")
+    print(f"\n🔄 [{ts}] Sending batch of {count} logs per provider...")
+
+    # AWS
+    aws_logs = generate_aws_logs(count)
+    send_logs(base_url, api_key, "aws", {"logs": aws_logs})
+
+    # Azure
+    azure_records = generate_azure_records(count)
+    send_logs(base_url, api_key, "azure", {"records": azure_records})
+
+    # GCP (one message per call, send `count` times)
+    for _ in range(count):
+        gcp_msg = generate_gcp_message()
+        send_logs(base_url, api_key, "gcp", {"message": gcp_msg})
+
+
+# ─── CLI ──────────────────────────────────────────────────────────────────────
+
+def main():
+    import os
+
+    parser = argparse.ArgumentParser(description="SIEM Log Generator")
+    parser.add_argument(
+        "--url",
+        default=os.getenv("SIEM_URL", "http://localhost/api/py"),
+        help="Base URL of the SIEM backend (default: $SIEM_URL or http://localhost/api/py)",
+    )
+    parser.add_argument(
+        "--api-key",
+        default=os.getenv("INGEST_API_KEY", "siem_ingest_key_change_me_in_production"),
+        help="Ingest API key (default: $INGEST_API_KEY)",
+    )
+    parser.add_argument(
+        "--count", type=int, default=5,
+        help="Number of logs per provider per batch (default: 5)",
+    )
+    parser.add_argument(
+        "--interval", type=int, default=8,
+        help="Seconds between batches in loop mode (default: 8)",
+    )
+    parser.add_argument(
+        "--once", action="store_true",
+        help="Send one batch and exit (instead of looping)",
+    )
+    args = parser.parse_args()
+
+    print("=" * 55)
+    print("  Pinnacle SIEM — Log Generator")
+    print("=" * 55)
+    print(f"  Target : {args.url}")
+    print(f"  API Key: {args.api_key[:8]}...{args.api_key[-4:]}")
+    print(f"  Batch  : {args.count} logs/provider")
+    print(f"  Mode   : {'Single shot' if args.once else f'Loop every {args.interval}s'}")
+    print("=" * 55)
+
+    if args.once:
+        send_batch(args.url, args.api_key, args.count)
+        print("\n✨ Done!")
+    else:
+        try:
+            while True:
+                send_batch(args.url, args.api_key, args.count)
+                time.sleep(args.interval)
+        except KeyboardInterrupt:
+            print("\n\n🛑 Stopped by user.")
+
+
+if __name__ == "__main__":
+    main()
 
 
