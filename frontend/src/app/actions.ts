@@ -221,3 +221,115 @@ export async function deployCloudLogging(
         return { status: "error", detail: String(e) };
     }
 }
+
+
+// ==========================================
+// AI Insights Types
+// ==========================================
+
+export interface AIAlert {
+    _id: string;
+    _index: string;
+    timestamp: string;
+    severity: "critical" | "high" | "medium" | "low" | "info";
+    category: string;
+    title: string;
+    description: string;
+    affected_resources: string;
+    recommended_action: string;
+    dismissed: boolean;
+    source_log_count: number;
+    analysis_id: string;
+}
+
+export interface AIAlertSearchResult {
+    total: number;
+    page: number;
+    size: number;
+    alerts: AIAlert[];
+}
+
+export interface AIAlertStats {
+    total_active: number;
+    by_severity: Record<string, number>;
+    by_category: Record<string, number>;
+    last_24h: number;
+}
+
+export interface AIMonitorStatus {
+    active: boolean;
+    interval_seconds: number;
+    api_key_configured: boolean;
+    timestamp: string | null;
+    status: string;
+    logs_analyzed: number;
+    alerts_generated: number;
+}
+
+// ==========================================
+// AI Insights Actions
+// ==========================================
+
+export async function getAIAlerts(
+    severity?: string,
+    category?: string,
+    dismissed?: boolean,
+    page: number = 1,
+    size: number = 50,
+): Promise<AIAlertSearchResult> {
+    try {
+        const params = new URLSearchParams();
+        if (severity) params.set("severity", severity);
+        if (category) params.set("category", category);
+        if (dismissed !== undefined) params.set("dismissed", String(dismissed));
+        params.set("page", page.toString());
+        params.set("size", size.toString());
+
+        return await pythonApi<AIAlertSearchResult>(`/ai/alerts?${params.toString()}`, {
+            cache: "no-store",
+        });
+    } catch (e) {
+        console.error("Failed to fetch AI alerts:", e);
+        return { total: 0, page: 1, size: 50, alerts: [] };
+    }
+}
+
+export async function getAIAlertStats(): Promise<AIAlertStats> {
+    try {
+        return await pythonApi<AIAlertStats>("/ai/stats", { cache: "no-store" });
+    } catch (e) {
+        console.error("Failed to get AI alert stats:", e);
+        return { total_active: 0, by_severity: {}, by_category: {}, last_24h: 0 };
+    }
+}
+
+export async function dismissAIAlert(alertId: string, index: string): Promise<boolean> {
+    try {
+        const params = new URLSearchParams({ index });
+        await pythonApi(`/ai/alerts/${alertId}/dismiss?${params.toString()}`, {
+            method: "POST",
+        });
+        return true;
+    } catch (e) {
+        console.error("Failed to dismiss AI alert:", e);
+        return false;
+    }
+}
+
+export async function getAIMonitorStatus(): Promise<AIMonitorStatus> {
+    try {
+        return await pythonApi<AIMonitorStatus>("/ai/status", { cache: "no-store" });
+    } catch (e) {
+        console.error("Failed to get AI monitor status:", e);
+        return {
+            active: false,
+            interval_seconds: 60,
+            api_key_configured: false,
+            timestamp: null,
+            status: "error",
+            logs_analyzed: 0,
+            alerts_generated: 0,
+        };
+    }
+}
+

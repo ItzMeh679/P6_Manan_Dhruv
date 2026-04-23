@@ -16,3 +16,4 @@ google-auth-oauthlib>=1.2.0
 google-cloud-logging>=3.10.0
 google-cloud-pubsub>=2.21.0
 google-api-python-client>=2.130.0
+aiosmtplib>=3.0.0
